@@ -1,0 +1,2032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actify AI Marketplace</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #fff;
+            user-select: none;
+        }
+        #game-container { width: 100vw; height: 100vh; position: relative; }
+        canvas { display: block; }
+
+        /* HUD */
+        #hud {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10;
+        }
+        #hud * { pointer-events: auto; }
+
+        /* Top bar */
+        #top-bar {
+            position: absolute; top: 0; left: 0; width: 100%;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 18px 32px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+            pointer-events: none;
+        }
+        #logo {
+            font-size: 22px; font-weight: 700; letter-spacing: 2px;
+            background: linear-gradient(135deg, #ff3cac, #784ba0, #2b86c5);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        #logo span { font-weight: 300; opacity: 0.8; }
+        #stats {
+            display: flex; gap: 24px; font-size: 13px; opacity: 0.7;
+        }
+        #stats div { display: flex; align-items: center; gap: 6px; }
+
+        /* Crosshair */
+        #crosshair {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px; height: 24px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        #crosshair.active {
+            border-color: #ff3cac;
+            box-shadow: 0 0 20px rgba(255,60,172,0.5);
+            transform: translate(-50%, -50%) scale(1.3);
+        }
+        #crosshair::after {
+            content: ''; position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%,-50%);
+            width: 4px; height: 4px; border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+        }
+
+        /* Prompt */
+        #interact-prompt {
+            position: absolute; bottom: 180px; left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            padding: 14px 28px;
+            background: rgba(0,0,0,0.85);
+            border: 1px solid rgba(255,60,172,0.4);
+            border-radius: 12px;
+            font-size: 14px; letter-spacing: 1px;
+            opacity: 0; transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+            backdrop-filter: blur(20px);
+            white-space: nowrap;
+        }
+        #interact-prompt.visible {
+            opacity: 1; transform: translateX(-50%) translateY(0);
+        }
+        #interact-prompt kbd {
+            display: inline-block; padding: 3px 10px;
+            background: rgba(255,60,172,0.25); border: 1px solid rgba(255,60,172,0.5);
+            border-radius: 6px; font-size: 13px; font-weight: 700;
+            margin: 0 4px; color: #ff3cac;
+        }
+
+        /* Shop Panel */
+        #shop-panel {
+            position: absolute; top: 0; right: 0;
+            width: 440px; height: 100%;
+            background: rgba(8,6,20,0.92);
+            backdrop-filter: blur(40px) saturate(1.5);
+            border-left: 1px solid rgba(255,60,172,0.15);
+            transform: translateX(100%);
+            transition: transform 0.5s cubic-bezier(0.16,1,0.3,1);
+            overflow-y: auto; overflow-x: hidden;
+            z-index: 100;
+        }
+        #shop-panel.open { transform: translateX(0); }
+        #shop-panel::-webkit-scrollbar { width: 4px; }
+        #shop-panel::-webkit-scrollbar-track { background: transparent; }
+        #shop-panel::-webkit-scrollbar-thumb { background: rgba(255,60,172,0.3); border-radius: 4px; }
+
+        .panel-header {
+            padding: 32px 28px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            position: relative;
+        }
+        .panel-close {
+            position: absolute; top: 24px; right: 24px;
+            width: 36px; height: 36px; border-radius: 50%;
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+            color: #fff; font-size: 18px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .panel-close:hover { background: rgba(255,60,172,0.2); border-color: rgba(255,60,172,0.4); }
+        .shop-name {
+            font-size: 26px; font-weight: 700; margin-bottom: 6px;
+        }
+        .shop-category {
+            font-size: 12px; text-transform: uppercase; letter-spacing: 2px;
+            color: #ff3cac; font-weight: 600;
+        }
+        .shop-desc {
+            font-size: 13px; line-height: 1.6; color: rgba(255,255,255,0.5);
+            padding: 0 28px; margin: 16px 0;
+        }
+
+        /* AI Section */
+        .ai-section {
+            margin: 0 28px 20px; padding: 16px 20px;
+            background: linear-gradient(135deg, rgba(255,60,172,0.08), rgba(43,134,197,0.08));
+            border: 1px solid rgba(255,60,172,0.15);
+            border-radius: 12px;
+        }
+        .ai-label {
+            font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
+            color: #784ba0; margin-bottom: 8px; font-weight: 700;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .ai-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #ff3cac; animation: pulse 1.5s ease infinite;
+        }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .ai-text { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.5; }
+        .ai-analyzing { color: rgba(255,255,255,0.4); font-style: italic; }
+
+        /* Products */
+        .products-label {
+            padding: 0 28px; font-size: 11px; text-transform: uppercase;
+            letter-spacing: 2px; color: rgba(255,255,255,0.3);
+            margin-bottom: 14px; font-weight: 600;
+        }
+        .product-card {
+            margin: 0 20px 12px; padding: 18px 20px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            transition: all 0.3s ease; cursor: pointer;
+            position: relative; overflow: hidden;
+        }
+        .product-card::before {
+            content: ''; position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(255,60,172,0.05), transparent);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .product-card:hover { border-color: rgba(255,60,172,0.3); transform: translateX(4px); }
+        .product-card:hover::before { opacity: 1; }
+        .product-card.recommended { border-color: rgba(255,60,172,0.2); }
+        .product-card.recommended::after {
+            content: '★ AI Pick'; position: absolute; top: 12px; right: 14px;
+            font-size: 10px; color: #ff3cac; font-weight: 700;
+            letter-spacing: 1px; text-transform: uppercase;
+        }
+        .product-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+        .product-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+        .product-price {
+            font-size: 18px; font-weight: 700;
+            background: linear-gradient(135deg, #ff3cac, #784ba0);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .product-rating { font-size: 12px; color: rgba(255,255,255,0.4); }
+        .product-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+        .tag {
+            padding: 3px 10px; font-size: 10px;
+            background: rgba(255,255,255,0.06); border-radius: 20px;
+            color: rgba(255,255,255,0.5); text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .product-desc {
+            font-size: 12px; color: rgba(255,255,255,0.35);
+            line-height: 1.5; margin-top: 8px;
+        }
+
+        /* Escrow Panel */
+        #escrow-panel {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(8,6,20,0.95);
+            backdrop-filter: blur(20px);
+            z-index: 110; display: none;
+            flex-direction: column; padding: 32px 28px;
+        }
+        #escrow-panel.active { display: flex; }
+        .escrow-header { font-size: 20px; font-weight: 700; color: #ff3cac; margin-bottom: 24px; }
+        .escrow-product { font-size: 16px; margin-bottom: 8px; }
+        .escrow-price { font-size: 24px; font-weight: 700; background: linear-gradient(135deg, #00e5a0, #2b86c5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 32px; }
+        .escrow-steps { display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px; }
+        .escrow-step { display: flex; align-items: center; gap: 12px; opacity: 0.3; transition: opacity 0.3s; }
+        .escrow-step.active { opacity: 1; }
+        .escrow-step.done { opacity: 0.7; }
+        .escrow-step.done .step-icon { background: #00e5a0; border-color: #00e5a0; color: #08061a; }
+        .escrow-step.active .step-icon { border-color: #ff3cac; color: #ff3cac; box-shadow: 0 0 10px rgba(255,60,172,0.4); }
+        .step-icon { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; transition: all 0.3s; }
+        .step-text { font-size: 14px; font-weight: 600; }
+        .escrow-close { margin-top: auto; padding: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; cursor: pointer; text-align: center; text-transform: uppercase; font-size: 13px; letter-spacing: 1px; transition: background 0.2s; }
+        .escrow-close:hover { background: rgba(255,255,255,0.1); }
+        .buy-btn { width: 100%; padding: 10px; margin-top: 14px; background: linear-gradient(135deg, rgba(43,134,197,0.2), rgba(0,229,160,0.2)); border: 1px solid rgba(0,229,160,0.5); border-radius: 8px; color: #00e5a0; font-weight: 600; cursor: pointer; transition: all 0.2s; text-transform: uppercase; font-size: 11px; letter-spacing: 1.5px; }
+        .buy-btn:hover { background: linear-gradient(135deg, rgba(43,134,197,0.4), rgba(0,229,160,0.4)); box-shadow: 0 0 15px rgba(0,229,160,0.2); transform: translateY(-2px); border-color: #00e5a0; }
+
+        /* Minimap */
+        #minimap {
+            position: absolute; bottom: 24px; left: 24px;
+            width: 160px; height: 160px;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        #minimap canvas { width: 100%; height: 100%; }
+
+        /* Controls hint */
+        #controls-hint {
+            position: absolute; bottom: 24px; left: 50%;
+            transform: translateX(-50%);
+            display: flex; gap: 8px;
+            font-size: 11px; color: rgba(255,255,255,0.25);
+            letter-spacing: 1px;
+        }
+        #controls-hint span { padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; }
+
+        /* Loading screen */
+        #loading-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #08061a; z-index: 9999;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            transition: opacity 0.8s ease;
+        }
+        #loading-screen.hidden { opacity: 0; pointer-events: none; }
+        .loader-title {
+            font-size: 36px; font-weight: 700; letter-spacing: 4px;
+            background: linear-gradient(135deg, #ff3cac, #784ba0, #2b86c5);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+        }
+        .loader-bar-container {
+            width: 300px; height: 3px;
+            background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;
+        }
+        .loader-bar {
+            width: 0%; height: 100%;
+            background: linear-gradient(90deg, #ff3cac, #784ba0);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .loader-text {
+            margin-top: 16px; font-size: 12px; color: rgba(255,255,255,0.3);
+            letter-spacing: 2px; text-transform: uppercase;
+        }
+
+        /* Click to start */
+        #click-start {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(8,6,26,0.9); z-index: 9998;
+            display: none; flex-direction: column;
+            align-items: center; justify-content: center;
+            cursor: pointer;
+        }
+        #click-start.show { display: flex; }
+        .start-text {
+            font-size: 18px; letter-spacing: 4px; text-transform: uppercase;
+            color: rgba(255,255,255,0.6);
+            animation: breathe 2s ease infinite;
+        }
+        @keyframes breathe { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+        .start-sub {
+            font-size: 12px; color: rgba(255,255,255,0.2); margin-top: 12px;
+            letter-spacing: 2px;
+        }
+
+        /* Character Select */
+        #char-select-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #08061a; z-index: 9997;
+            display: none; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        #char-select-screen.show { display: flex; }
+        .char-title {
+            font-size: 28px; font-weight: 700; letter-spacing: 4px;
+            background: linear-gradient(135deg, #ff3cac, #784ba0, #2b86c5);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .char-subtitle {
+            font-size: 13px; color: rgba(255,255,255,0.3); letter-spacing: 2px;
+            margin-bottom: 36px; text-transform: uppercase;
+        }
+        .char-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 16px; max-width: 720px; padding: 0 20px;
+        }
+        .char-card {
+            width: 120px; height: 170px;
+            background: rgba(255,255,255,0.03);
+            border: 2px solid rgba(255,255,255,0.08);
+            border-radius: 16px; cursor: pointer;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            transition: all 0.3s ease; position: relative;
+            overflow: hidden;
+        }
+        .char-card:hover { border-color: rgba(255,60,172,0.4); transform: translateY(-4px);
+            background: rgba(255,60,172,0.05); }
+        .char-card.selected { border-color: #ff3cac;
+            box-shadow: 0 0 30px rgba(255,60,172,0.25), inset 0 0 20px rgba(255,60,172,0.05); }
+        .char-card.selected::after {
+            content: '✓'; position: absolute; top: 8px; right: 10px;
+            color: #ff3cac; font-size: 14px; font-weight: 700;
+        }
+        .char-avatar {
+            width: 60px; height: 80px; margin-bottom: 10px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .char-avatar canvas { border-radius: 8px; }
+        .char-name {
+            font-size: 11px; font-weight: 600; letter-spacing: 1px;
+            color: rgba(255,255,255,0.7); text-align: center;
+        }
+        .char-role {
+            font-size: 9px; color: rgba(255,255,255,0.3); margin-top: 2px;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        #char-confirm {
+            margin-top: 32px; padding: 14px 48px;
+            background: linear-gradient(135deg, rgba(255,60,172,0.3), rgba(120,75,160,0.3));
+            border: 1px solid rgba(255,60,172,0.5);
+            border-radius: 12px; color: #fff;
+            font-size: 14px; font-weight: 600;
+            letter-spacing: 2px; text-transform: uppercase;
+            cursor: pointer; transition: all 0.3s ease;
+            opacity: 0.4; pointer-events: none;
+        }
+        #char-confirm.active { opacity: 1; pointer-events: auto; }
+        #char-confirm.active:hover {
+            background: linear-gradient(135deg, rgba(255,60,172,0.5), rgba(120,75,160,0.5));
+            transform: translateY(-2px); box-shadow: 0 8px 30px rgba(255,60,172,0.2);
+        }
+
+        /* Teleport flash */
+        #teleport-flash {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,60,172,0.15); z-index: 50;
+            pointer-events: none; opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+        #teleport-flash.active { opacity: 1; }
+
+        /* FPS counter */
+        #fps { position: absolute; top: 20px; right: 200px; font-size: 11px; color: rgba(255,255,255,0.3); }
+
+        /* Stamina bar */
+        #stamina-container {
+            position: absolute; bottom: 60px; left: 50%;
+            transform: translateX(-50%);
+            width: 200px; height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px; overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.08);
+            opacity: 0; transition: opacity 0.4s ease;
+        }
+        #stamina-container.visible { opacity: 1; }
+        #stamina-bar {
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, #ff3cac, #784ba0);
+            border-radius: 10px;
+            transition: width 0.05s linear, background 0.3s ease;
+        }
+        #stamina-bar.depleted {
+            background: linear-gradient(90deg, #ff1744, #aa0022);
+        }
+        #stamina-bar.recovering {
+            background: linear-gradient(90deg, #00e5a0, #2b86c5);
+        }
+        #stamina-label {
+            position: absolute; top: -18px; left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+            color: rgba(255,255,255,0.3); white-space: nowrap;
+        }
+        #sprint-indicator {
+            position: absolute; bottom: 74px; left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+            color: #ff3cac; font-weight: 700;
+            opacity: 0; transition: opacity 0.2s ease;
+            text-shadow: 0 0 10px rgba(255,60,172,0.5);
+        }
+        #sprint-indicator.visible { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+
+    <div id="hud">
+        <div id="top-bar">
+            <div id="logo">ACTIFY <span>MARKETPLACE</span></div>
+            <div id="stats">
+                <div>🏪 <span id="shop-count">5</span> Shops</div>
+                <div>📍 Zone: <span id="current-zone">Central Plaza</span></div>
+            </div>
+        </div>
+
+        <div id="crosshair"></div>
+        <div id="interact-prompt">Press <kbd>E</kbd> to enter shop</div>
+
+        <div id="shop-panel">
+            <div class="panel-header">
+                <div class="shop-category" id="panel-category"></div>
+                <div class="shop-name" id="panel-name"></div>
+                <button class="panel-close" onclick="closeShop()">✕</button>
+            </div>
+            <div class="shop-desc" id="panel-desc"></div>
+            <div class="ai-section">
+                <div class="ai-label"><div class="ai-dot"></div> ACTIFY AI</div>
+                <div class="ai-text" id="ai-text"></div>
+            </div>
+            <div class="products-label">Available Products</div>
+            <div id="products-list"></div>
+            <div id="escrow-panel">
+                <div class="escrow-header">Smart Contract Escrow</div>
+                <div class="escrow-product" id="escrow-prod-name"></div>
+                <div class="escrow-price" id="escrow-prod-price"></div>
+                <div class="escrow-steps">
+                    <div class="escrow-step" id="step-1"><div class="step-icon">1</div><div class="step-text">Initializing Transaction</div></div>
+                    <div class="escrow-step" id="step-2"><div class="step-icon">2</div><div class="step-text">Funds Locked in Escrow</div></div>
+                    <div class="escrow-step" id="step-3"><div class="step-icon">3</div><div class="step-text">Awaiting Delivery</div></div>
+                    <div class="escrow-step" id="step-4"><div class="step-icon">✓</div><div class="step-text">Delivered & Funds Released</div></div>
+                </div>
+                <div class="escrow-close" onclick="closeEscrow()" style="display:none;" id="escrow-close-btn">Return to Shop</div>
+            </div>
+        </div>
+
+        <div id="minimap"><canvas id="minimap-canvas" width="160" height="160"></canvas>
+            <div style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);font-size:8px;color:rgba(255,255,255,0.25);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Click to teleport</div>
+        </div>
+
+        <div id="stamina-container">
+            <div id="stamina-label">Stamina</div>
+            <div id="stamina-bar"></div>
+        </div>
+        <div id="sprint-indicator">⚡ SPRINTING</div>
+
+        <div id="controls-hint">
+            <span>WASD Move</span>
+            <span>Mouse Look</span>
+            <span>⇧ Sprint</span>
+            <span>E Interact</span>
+            <span>ESC Menu</span>
+        </div>
+    </div>
+
+    <div id="loading-screen">
+        <div class="loader-title">ACTIFY</div>
+        <div class="loader-bar-container"><div class="loader-bar" id="loader-bar"></div></div>
+        <div class="loader-text" id="loader-text">Initializing world...</div>
+    </div>
+
+    <div id="char-select-screen">
+        <div class="char-title">Choose Your Avatar</div>
+        <div class="char-subtitle">Select a character to explore the marketplace</div>
+        <div class="char-grid" id="char-grid"></div>
+        <button id="char-confirm">Enter Marketplace</button>
+    </div>
+
+    <div id="click-start">
+        <div class="start-text">Click to Enter Marketplace</div>
+        <div class="start-sub">Use mouse to look around</div>
+    </div>
+
+    <div id="teleport-flash"></div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // ─── CHARACTER DEFINITIONS ───
+        const CHARACTERS = [
+            { name: "Nova", role: "Explorer", bodyColor: "#ff3cac", headColor: "#ffcce6", accentColor: "#ff3cac", hairStyle: "spiky", hairColor: "#cc2288" },
+            { name: "Cipher", role: "Hacker", bodyColor: "#2b86c5", headColor: "#d4eaf7", accentColor: "#2b86c5", hairStyle: "mohawk", hairColor: "#1a5580" },
+            { name: "Sage", role: "Analyst", bodyColor: "#00e5a0", headColor: "#ccfff0", accentColor: "#00e5a0", hairStyle: "long", hairColor: "#008866" },
+            { name: "Blaze", role: "Trader", bodyColor: "#ff6b35", headColor: "#ffe0cc", accentColor: "#ff6b35", hairStyle: "short", hairColor: "#cc4400" },
+            { name: "Vex", role: "Scout", bodyColor: "#784ba0", headColor: "#e8d5f5", accentColor: "#784ba0", hairStyle: "bob", hairColor: "#5a2d80" },
+            { name: "Zera", role: "Architect", bodyColor: "#ffd700", headColor: "#fff8cc", accentColor: "#ffd700", hairStyle: "bun", hairColor: "#cc9900" },
+            { name: "Hex", role: "Engineer", bodyColor: "#ff1744", headColor: "#ffcccc", accentColor: "#ff1744", hairStyle: "flat", hairColor: "#aa0022" },
+            { name: "Drift", role: "Navigator", bodyColor: "#00bcd4", headColor: "#ccf5fa", accentColor: "#00bcd4", hairStyle: "wavy", hairColor: "#007788" },
+            { name: "Rune", role: "Mystic", bodyColor: "#e040fb", headColor: "#f5ccff", accentColor: "#e040fb", hairStyle: "twin", hairColor: "#9c27b0" },
+            { name: "Bolt", role: "Speedster", bodyColor: "#76ff03", headColor: "#e5ffcc", accentColor: "#76ff03", hairStyle: "spiky", hairColor: "#44aa00" }
+        ];
+
+        let selectedCharIndex = -1;
+
+        // ─── CHARACTER SELECTION SCREEN ───
+        function drawCharPreview(canvas, char) {
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            // Body
+            ctx.fillStyle = char.bodyColor;
+            ctx.beginPath();
+            ctx.roundRect(w*0.3, h*0.45, w*0.4, h*0.4, 6);
+            ctx.fill();
+
+            // Arms
+            ctx.fillStyle = char.bodyColor;
+            ctx.fillRect(w*0.15, h*0.48, w*0.15, h*0.08);
+            ctx.fillRect(w*0.7, h*0.48, w*0.15, h*0.08);
+
+            // Legs
+            ctx.fillRect(w*0.32, h*0.83, w*0.14, h*0.15);
+            ctx.fillRect(w*0.54, h*0.83, w*0.14, h*0.15);
+
+            // Head
+            ctx.fillStyle = char.headColor;
+            ctx.beginPath();
+            ctx.arc(w*0.5, h*0.3, w*0.18, 0, Math.PI*2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = '#1a1a2e';
+            ctx.beginPath();
+            ctx.arc(w*0.42, h*0.28, 2.5, 0, Math.PI*2);
+            ctx.arc(w*0.58, h*0.28, 2.5, 0, Math.PI*2);
+            ctx.fill();
+
+            // Eye glow
+            ctx.fillStyle = char.accentColor;
+            ctx.beginPath();
+            ctx.arc(w*0.42, h*0.28, 1.2, 0, Math.PI*2);
+            ctx.arc(w*0.58, h*0.28, 1.2, 0, Math.PI*2);
+            ctx.fill();
+
+            // Hair
+            ctx.fillStyle = char.hairColor;
+            switch(char.hairStyle) {
+                case 'spiky':
+                    for(let i = -2; i <= 2; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(w*0.5 + i*6, h*0.12);
+                        ctx.lineTo(w*0.5 + i*6 - 5, h*0.22);
+                        ctx.lineTo(w*0.5 + i*6 + 5, h*0.22);
+                        ctx.fill();
+                    }
+                    break;
+                case 'mohawk':
+                    ctx.beginPath();
+                    ctx.ellipse(w*0.5, h*0.15, 4, 12, 0, 0, Math.PI*2);
+                    ctx.fill();
+                    break;
+                case 'long':
+                    ctx.beginPath();
+                    ctx.ellipse(w*0.5, h*0.25, w*0.22, h*0.18, 0, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillRect(w*0.28, h*0.25, w*0.08, h*0.25);
+                    ctx.fillRect(w*0.64, h*0.25, w*0.08, h*0.25);
+                    break;
+                case 'short':
+                    ctx.beginPath();
+                    ctx.arc(w*0.5, h*0.24, w*0.2, Math.PI, 0);
+                    ctx.fill();
+                    break;
+                case 'bob':
+                    ctx.beginPath();
+                    ctx.arc(w*0.5, h*0.28, w*0.21, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = char.headColor;
+                    ctx.beginPath();
+                    ctx.arc(w*0.5, h*0.27, w*0.15, 0, Math.PI*2);
+                    ctx.fill();
+                    break;
+                case 'bun':
+                    ctx.beginPath();
+                    ctx.arc(w*0.5, h*0.13, 7, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(w*0.5, h*0.24, w*0.19, Math.PI, 0);
+                    ctx.fill();
+                    break;
+                case 'flat':
+                    ctx.fillRect(w*0.3, h*0.15, w*0.4, h*0.08);
+                    break;
+                case 'wavy':
+                    ctx.beginPath();
+                    ctx.arc(w*0.5, h*0.24, w*0.2, Math.PI, 0);
+                    ctx.fill();
+                    ctx.fillRect(w*0.28, h*0.24, w*0.06, h*0.18);
+                    ctx.fillRect(w*0.66, h*0.24, w*0.06, h*0.18);
+                    break;
+                case 'twin':
+                    ctx.beginPath();
+                    ctx.arc(w*0.32, h*0.17, 6, 0, Math.PI*2);
+                    ctx.arc(w*0.68, h*0.17, 6, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(w*0.5, h*0.24, w*0.19, Math.PI, 0);
+                    ctx.fill();
+                    break;
+            }
+
+            // Accent belt
+            ctx.fillStyle = char.accentColor;
+            ctx.fillRect(w*0.3, h*0.62, w*0.4, h*0.04);
+
+            // Boot accent
+            ctx.fillStyle = char.accentColor;
+            ctx.fillRect(w*0.32, h*0.92, w*0.14, h*0.04);
+            ctx.fillRect(w*0.54, h*0.92, w*0.14, h*0.04);
+        }
+
+        function initCharSelect() {
+            const grid = document.getElementById('char-grid');
+            CHARACTERS.forEach((char, i) => {
+                const card = document.createElement('div');
+                card.className = 'char-card';
+                card.dataset.index = i;
+
+                const avatarDiv = document.createElement('div');
+                avatarDiv.className = 'char-avatar';
+                const cvs = document.createElement('canvas');
+                cvs.width = 60; cvs.height = 80;
+                drawCharPreview(cvs, char);
+                avatarDiv.appendChild(cvs);
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'char-name';
+                nameDiv.textContent = char.name;
+
+                const roleDiv = document.createElement('div');
+                roleDiv.className = 'char-role';
+                roleDiv.textContent = char.role;
+
+                card.appendChild(avatarDiv);
+                card.appendChild(nameDiv);
+                card.appendChild(roleDiv);
+
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    selectedCharIndex = i;
+                    document.getElementById('char-confirm').classList.add('active');
+                    playInteract();
+                });
+
+                grid.appendChild(card);
+            });
+
+            document.getElementById('char-confirm').addEventListener('click', () => {
+                if (selectedCharIndex < 0) return;
+                document.getElementById('char-select-screen').classList.remove('show');
+                document.getElementById('click-start').classList.add('show');
+                buildPlayerModel(CHARACTERS[selectedCharIndex]);
+                playOpen();
+            });
+        }
+
+        // ─── AUDIO CONTEXT ───
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+        function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+        function playTone(freq, dur, vol = 0.06, type = 'sine') {
+            try {
+                ensureAudio();
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.type = type;
+                o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                g.gain.setValueAtTime(vol, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(); o.stop(audioCtx.currentTime + dur);
+            } catch(e) {}
+        }
+        function playStep() { playTone(80 + Math.random()*40, 0.08, 0.03, 'triangle'); }
+        function playInteract() { playTone(880, 0.15, 0.05); setTimeout(()=>playTone(1100, 0.12, 0.04), 80); }
+        function playOpen() { playTone(440, 0.2, 0.04); setTimeout(()=>playTone(660, 0.15, 0.04), 100); setTimeout(()=>playTone(880, 0.12, 0.03), 200); }
+        function playClose() { playTone(600, 0.12, 0.03); setTimeout(()=>playTone(400, 0.15, 0.03), 80); }
+
+        // ─── SHOP DATA ───
+        const SHOPS = [
+            {
+                name: "Neon Forge",
+                category: "Digital Hardware",
+                desc: "Premium computing hardware and peripherals curated for creators and developers. Cutting-edge components at competitive prices.",
+                color: 0xff3cac,
+                position: { x: -18, z: -18 },
+                rotation: Math.PI * 0.25,
+                ai: "Based on trending searches and high review scores, we've highlighted the RTX 5080 and the MechKey 75 as top picks this week.",
+                products: [
+                    { name: "Quantum RTX 5080 GPU", price: "24.50 tACT", rating: "4.9", desc: "Next-gen ray tracing with 24GB VRAM. Ideal for 3D rendering and AI workloads.", tags: ["GPU", "Trending"], recommended: true },
+                    { name: "MechKey 75 Keyboard", price: "3.50 tACT", rating: "4.8", desc: "Hot-swappable mechanical switches with per-key RGB. Compact 75% layout.", tags: ["Peripheral", "Popular"], recommended: true },
+                    { name: "HyperSync 4K Monitor", price: "12.00 tACT", rating: "4.7", desc: "32-inch IPS panel, 144Hz refresh rate, factory-calibrated color accuracy.", tags: ["Display", "Creator"] },
+                    { name: "NanoSSD 4TB Drive", price: "6.50 tACT", rating: "4.6", desc: "PCIe Gen5 NVMe with sequential reads up to 14,000 MB/s.", tags: ["Storage"] }
+                ]
+            },
+            {
+                name: "Aether Studio",
+                category: "Creative Software",
+                desc: "Professional creative tools and software licenses. From 3D modeling suites to AI-powered design platforms.",
+                color: 0x784ba0,
+                position: { x: 18, z: -18 },
+                rotation: -Math.PI * 0.25,
+                ai: "Aether Suite Pro has been the #1 seller among 3D artists this month. Bundle pricing detected — save 30% on the Creative Stack.",
+                products: [
+                    { name: "Aether Suite Pro 2026", price: "9.20 tACT/yr", rating: "4.9", desc: "Complete 3D creation suite with real-time rendering, sculpting, and animation tools.", tags: ["3D", "Pro"], recommended: true },
+                    { name: "PixelMind AI Designer", price: "0.50 tACT/mo", rating: "4.7", desc: "AI-assisted graphic design platform with brand kit management.", tags: ["AI", "Design"], recommended: false },
+                    { name: "WaveForm Audio Suite", price: "3.20 tACT", rating: "4.5", desc: "Professional audio editing and mixing with spatial audio support.", tags: ["Audio", "Creator"] },
+                    { name: "Creative Stack Bundle", price: "15.00 tACT/yr", rating: "4.8", desc: "All-in-one: 3D, design, video, and audio tools at a bundled discount.", tags: ["Bundle", "Best Value"], recommended: true }
+                ]
+            },
+            {
+                name: "Voidwear",
+                category: "Tech Fashion",
+                desc: "Wearable technology meets avant-garde fashion. Smart fabrics, haptic accessories, and cyberwear essentials.",
+                color: 0x2b86c5,
+                position: { x: -18, z: 18 },
+                rotation: -Math.PI * 0.25 + Math.PI,
+                ai: "Haptic Glove X is trending among VR enthusiasts. Paired with the Neural Band, users report 40% better immersion scores.",
+                products: [
+                    { name: "Haptic Glove X", price: "5.50 tACT", rating: "4.8", desc: "Full-hand haptic feedback with micro-actuators. Compatible with all major VR platforms.", tags: ["VR", "Wearable"], recommended: true },
+                    { name: "Neural Band Pro", price: "4.10 tACT", rating: "4.6", desc: "EEG-enabled headband for focus tracking and meditation guidance.", tags: ["Wellness", "Smart"] },
+                    { name: "Chromatic Jacket v2", price: "11.00 tACT", rating: "4.4", desc: "E-ink fabric panels that shift color patterns via companion app.", tags: ["Fashion", "Limited"] },
+                    { name: "PulseRing Health Tracker", price: "2.40 tACT", rating: "4.7", desc: "Titanium smart ring with heart rate, SpO2, and sleep tracking.", tags: ["Health", "Compact"], recommended: true }
+                ]
+            },
+            {
+                name: "Synth Kitchen",
+                category: "Smart Home & IoT",
+                desc: "Intelligent appliances and IoT devices for the connected home. Automate, monitor, and optimize your living space.",
+                color: 0x00e5a0,
+                position: { x: 18, z: 18 },
+                rotation: Math.PI * 0.25 + Math.PI,
+                ai: "The AeroChef Pro is our most-recommended product based on energy savings data and user satisfaction metrics.",
+                products: [
+                    { name: "AeroChef Pro Oven", price: "16.00 tACT", rating: "4.9", desc: "AI-optimized cooking with thermal cameras and auto-recipe detection.", tags: ["Kitchen", "AI"], recommended: true },
+                    { name: "LumiPanel Smart Lights", price: "1.20 tACT/pk", rating: "4.7", desc: "Hexagonal LED panels with scene-adaptive lighting and music sync.", tags: ["Lighting", "Modular"] },
+                    { name: "AquaPure Filter System", price: "6.20 tACT", rating: "4.5", desc: "6-stage smart water filter with real-time quality monitoring via app.", tags: ["Water", "Health"] },
+                    { name: "Guardian Cam 360", price: "3.50 tACT", rating: "4.6", desc: "Indoor/outdoor security camera with edge AI and person detection.", tags: ["Security", "Smart"], recommended: true }
+                ]
+            },
+            {
+                name: "Orbit Lab",
+                category: "XR & Spatial Computing",
+                desc: "Extended reality hardware and spatial computing tools. Step into the next dimension of human-computer interaction.",
+                color: 0xff6b35,
+                position: { x: 0, z: -28 },
+                rotation: 0,
+                ai: "Spatial XR-1 headset is rated best-in-class for mixed reality. Pairing it with the HoloDesk creates a fully immersive workspace.",
+                products: [
+                    { name: "Spatial XR-1 Headset", price: "28.50 tACT", rating: "4.9", desc: "Mixed reality headset with 8K micro-OLED displays and inside-out tracking.", tags: ["XR", "Premium"], recommended: true },
+                    { name: "HoloDesk Workspace", price: "45.00 tACT", rating: "4.7", desc: "Holographic desktop projector for spatial computing workflows.", tags: ["Spatial", "Pro"], recommended: true },
+                    { name: "TrackSuit Full Body Kit", price: "12.50 tACT", rating: "4.5", desc: "IMU-based full body tracking suit for VR and motion capture.", tags: ["MoCap", "VR"] },
+                    { name: "Portal Lens AR Glasses", price: "14.20 tACT", rating: "4.6", desc: "Lightweight AR glasses with waveguide display and gesture control.", tags: ["AR", "Everyday"] }
+                ]
+            }
+        ];
+
+        // ─── SCENE SETUP ───
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x08061a, 0.012);
+
+        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+        camera.position.set(0, 1.7, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        document.getElementById('game-container').appendChild(renderer.domElement);
+
+        // ─── LIGHTING ───
+        const ambientLight = new THREE.AmbientLight(0x1a1040, 0.8);
+        scene.add(ambientLight);
+
+        const hemiLight = new THREE.HemisphereLight(0x2b86c5, 0x1a0a2e, 0.6);
+        scene.add(hemiLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffe4c9, 1.8);
+        sunLight.position.set(30, 50, 20);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 120;
+        sunLight.shadow.camera.left = -50;
+        sunLight.shadow.camera.right = 50;
+        sunLight.shadow.camera.top = 50;
+        sunLight.shadow.camera.bottom = -50;
+        sunLight.shadow.bias = -0.001;
+        sunLight.shadow.normalBias = 0.02;
+        scene.add(sunLight);
+
+        const moonLight = new THREE.DirectionalLight(0x4466aa, 0.3);
+        moonLight.position.set(-20, 30, -30);
+        scene.add(moonLight);
+
+        // ─── MATERIALS ───
+        function createPBR(color, roughness = 0.8, metalness = 0.1) {
+            return new THREE.MeshStandardMaterial({ color, roughness, metalness });
+        }
+
+        // ─── GROUND ───
+        const groundGroup = new THREE.Group();
+        scene.add(groundGroup);
+
+        // Main hex ground
+        const groundGeo = new THREE.CircleGeometry(80, 64);
+        const groundMat = createPBR(0x0c0a1e, 0.95, 0.0);
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        groundGroup.add(ground);
+
+        // Hex tile pattern
+        function createHexTiles() {
+            const group = new THREE.Group();
+            const hexShape = new THREE.Shape();
+            const size = 0.9;
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI / 3) * i - Math.PI / 6;
+                const x = size * Math.cos(angle);
+                const y = size * Math.sin(angle);
+                if (i === 0) hexShape.moveTo(x, y);
+                else hexShape.lineTo(x, y);
+            }
+            hexShape.closePath();
+
+            const hexGeo = new THREE.ShapeGeometry(hexShape);
+            const hexMat1 = createPBR(0x120f2a, 0.9, 0.15);
+            const hexMat2 = createPBR(0x0f0c22, 0.92, 0.1);
+            const hexMat3 = createPBR(0x1a1535, 0.85, 0.2);
+
+            const mats = [hexMat1, hexMat2, hexMat3];
+            const w = size * Math.sqrt(3);
+            const h = size * 2;
+
+            for (let row = -25; row <= 25; row++) {
+                for (let col = -25; col <= 25; col++) {
+                    const x = col * w + (row % 2) * w / 2;
+                    const z = row * h * 0.75;
+                    if (x*x + z*z > 70*70) continue;
+
+                    const hex = new THREE.Mesh(hexGeo, mats[Math.floor(Math.random() * 3)]);
+                    hex.rotation.x = -Math.PI / 2;
+                    hex.position.set(x, 0.01 + Math.random() * 0.01, z);
+                    hex.receiveShadow = true;
+                    group.add(hex);
+                }
+            }
+            return group;
+        }
+        const hexTiles = createHexTiles();
+        scene.add(hexTiles);
+
+        // Glowing pathways
+        function createPath(from, to, color = 0xff3cac) {
+            const dir = new THREE.Vector3(to.x - from.x, 0, to.z - from.z);
+            const len = dir.length();
+            const geo = new THREE.PlaneGeometry(2.5, len);
+            const mat = new THREE.MeshStandardMaterial({
+                color: color,
+                emissive: color,
+                emissiveIntensity: 0.15,
+                roughness: 0.6,
+                metalness: 0.3,
+                transparent: true,
+                opacity: 0.4
+            });
+            const path = new THREE.Mesh(geo, mat);
+            path.rotation.x = -Math.PI / 2;
+            path.position.set((from.x + to.x)/2, 0.03, (from.z + to.z)/2);
+            path.rotation.z = -Math.atan2(dir.z, dir.x) + Math.PI/2;
+            path.receiveShadow = true;
+            return path;
+        }
+
+        // Paths from center to each shop
+        SHOPS.forEach(s => {
+            scene.add(createPath({x:0, z:0}, s.position, s.color));
+        });
+
+        // ─── SHOP BUILDINGS ───
+        const shopMeshes = [];
+        const shopBoundingBoxes = [];
+        const allColliders = [];
+
+        function createShopBuilding(data, index) {
+            const group = new THREE.Group();
+            group.position.set(data.position.x, 0, data.position.z);
+            group.rotation.y = data.rotation;
+
+            // Base platform
+            const platGeo = new THREE.CylinderGeometry(5, 5.5, 0.4, 6);
+            const platMat = createPBR(0x1a1535, 0.7, 0.3);
+            const plat = new THREE.Mesh(platGeo, platMat);
+            plat.position.y = 0.2;
+            plat.receiveShadow = true;
+            plat.castShadow = true;
+            group.add(plat);
+
+            // Main building
+            const bldGeo = new THREE.BoxGeometry(6, 5.5, 5);
+            const bldMat = new THREE.MeshStandardMaterial({
+                color: 0x161230,
+                roughness: 0.4,
+                metalness: 0.6,
+                emissive: data.color,
+                emissiveIntensity: 0.02
+            });
+            const bld = new THREE.Mesh(bldGeo, bldMat);
+            bld.position.y = 3.15;
+            bld.castShadow = true;
+            bld.receiveShadow = true;
+            group.add(bld);
+
+            // Roof accent
+            const roofGeo = new THREE.BoxGeometry(6.4, 0.3, 5.4);
+            const roofMat = new THREE.MeshStandardMaterial({
+                color: data.color,
+                roughness: 0.3,
+                metalness: 0.7,
+                emissive: data.color,
+                emissiveIntensity: 0.3
+            });
+            const roof = new THREE.Mesh(roofGeo, roofMat);
+            roof.position.y = 6.05;
+            roof.castShadow = true;
+            group.add(roof);
+
+            // Front panel (display window)
+            const winGeo = new THREE.PlaneGeometry(4.5, 3);
+            const winMat = new THREE.MeshStandardMaterial({
+                color: data.color,
+                emissive: data.color,
+                emissiveIntensity: 0.5,
+                roughness: 0.1,
+                metalness: 0.9,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide
+            });
+            const win = new THREE.Mesh(winGeo, winMat);
+            win.position.set(0, 3.5, 2.52);
+            group.add(win);
+
+            // Door frame  
+            const doorGeo = new THREE.BoxGeometry(1.8, 3, 0.2);
+            const doorMat = new THREE.MeshStandardMaterial({
+                color: data.color,
+                emissive: data.color,
+                emissiveIntensity: 0.4,
+                roughness: 0.2,
+                metalness: 0.8
+            });
+            const door = new THREE.Mesh(doorGeo, doorMat);
+            door.position.set(0, 1.9, 2.55);
+            group.add(door);
+
+            // Shop sign — floating above
+            const signGeo = new THREE.PlaneGeometry(5, 1.2);
+            const signCanvas = document.createElement('canvas');
+            signCanvas.width = 512; signCanvas.height = 128;
+            const ctx = signCanvas.getContext('2d');
+            ctx.fillStyle = '#08061a';
+            ctx.fillRect(0, 0, 512, 128);
+            ctx.fillStyle = '#' + new THREE.Color(data.color).getHexString();
+            ctx.font = 'bold 48px Segoe UI';
+            ctx.textAlign = 'center';
+            ctx.fillText(data.name.toUpperCase(), 256, 68);
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.font = '20px Segoe UI';
+            ctx.fillText(data.category, 256, 105);
+            const signTex = new THREE.CanvasTexture(signCanvas);
+            const signMat = new THREE.MeshStandardMaterial({
+                map: signTex,
+                emissive: data.color,
+                emissiveIntensity: 0.2,
+                transparent: true,
+                side: THREE.DoubleSide
+            });
+            const sign = new THREE.Mesh(signGeo, signMat);
+            sign.position.set(0, 7.2, 0);
+            sign.rotation.y = data.rotation > Math.PI / 2 ? Math.PI : 0;
+            group.add(sign);
+
+            // Point light for each shop
+            const light = new THREE.PointLight(data.color, 2, 15, 2);
+            light.position.set(0, 4, 4);
+            group.add(light);
+
+            // Ground spot light
+            const spotGeo = new THREE.CircleGeometry(3, 32);
+            const spotMat = new THREE.MeshStandardMaterial({
+                color: data.color,
+                emissive: data.color,
+                emissiveIntensity: 0.15,
+                transparent: true,
+                opacity: 0.3
+            });
+            const spot = new THREE.Mesh(spotGeo, spotMat);
+            spot.rotation.x = -Math.PI / 2;
+            spot.position.set(0, 0.04, 5);
+            group.add(spot);
+
+            // Vertical accent pillars
+            for (let side = -1; side <= 1; side += 2) {
+                const pilGeo = new THREE.BoxGeometry(0.2, 6, 0.2);
+                const pilMat = new THREE.MeshStandardMaterial({
+                    color: data.color,
+                    emissive: data.color,
+                    emissiveIntensity: 0.6,
+                    roughness: 0.2,
+                    metalness: 0.8
+                });
+                const pil = new THREE.Mesh(pilGeo, pilMat);
+                pil.position.set(side * 3.1, 3.4, 2.5);
+                pil.castShadow = true;
+                group.add(pil);
+            }
+
+            scene.add(group);
+
+            // Store references
+            shopMeshes.push({
+                group: group,
+                data: data,
+                index: index,
+                glowMeshes: [win, door, roof],
+                originalEmissiveIntensities: [0.5, 0.4, 0.3],
+                light: light
+            });
+
+            // Collision box (world space)
+            const box = new THREE.Box3();
+            const halfW = 4, halfD = 3.5;
+            const cos = Math.cos(data.rotation), sin = Math.sin(data.rotation);
+            // Approximate with an AABB around rotated box
+            const cx = data.position.x, cz = data.position.z;
+            const ext = Math.max(halfW, halfD) + 1;
+            box.min.set(cx - ext, 0, cz - ext);
+            box.max.set(cx + ext, 7, cz + ext);
+            allColliders.push(box);
+        }
+
+        SHOPS.forEach((s, i) => createShopBuilding(s, i));
+
+        // ─── ENVIRONMENT PROPS ───
+        // Trees
+        function createTree(x, z, scale = 1) {
+            const g = new THREE.Group();
+            const trunkGeo = new THREE.CylinderGeometry(0.15 * scale, 0.2 * scale, 2 * scale, 8);
+            const trunkMat = createPBR(0x2a1a0a, 0.9, 0.0);
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.y = scale;
+            trunk.castShadow = true;
+            g.add(trunk);
+
+            const colors = [0x1a3a2a, 0x0d2e1a, 0x2a4a3a];
+            for (let i = 0; i < 3; i++) {
+                const r = (1.5 - i * 0.35) * scale;
+                const leafGeo = new THREE.ConeGeometry(r, 1.5 * scale, 8);
+                const leafMat = createPBR(colors[i % 3], 0.85, 0.0);
+                const leaf = new THREE.Mesh(leafGeo, leafMat);
+                leaf.position.y = 2 * scale + i * 0.9 * scale;
+                leaf.castShadow = true;
+                g.add(leaf);
+            }
+            g.position.set(x, 0, z);
+            scene.add(g);
+        }
+
+        const treePositions = [
+            [-8, -8], [8, -8], [-8, 8], [8, 8],
+            [-12, 0], [12, 0], [0, -12], [0, 12],
+            [-25, -5], [25, 5], [-5, 25], [5, -25],
+            [-30, 15], [30, -15], [-15, 30], [15, -30],
+            [-22, 22], [22, -22], [-28, -20], [28, 20],
+            [0, 35], [35, 0], [-35, 0], [0, -35],
+        ];
+        treePositions.forEach(([x, z]) => createTree(x, z, 0.8 + Math.random() * 0.8));
+
+        // Street lamps
+        function createLamp(x, z) {
+            const g = new THREE.Group();
+            const poleGeo = new THREE.CylinderGeometry(0.06, 0.08, 4, 8);
+            const poleMat = createPBR(0x333344, 0.4, 0.7);
+            const pole = new THREE.Mesh(poleGeo, poleMat);
+            pole.position.y = 2;
+            pole.castShadow = true;
+            g.add(pole);
+
+            const bulbGeo = new THREE.SphereGeometry(0.2, 16, 16);
+            const bulbMat = new THREE.MeshStandardMaterial({
+                color: 0xffeedd,
+                emissive: 0xffeedd,
+                emissiveIntensity: 1.5,
+                roughness: 0.1
+            });
+            const bulb = new THREE.Mesh(bulbGeo, bulbMat);
+            bulb.position.y = 4.2;
+            g.add(bulb);
+
+            const pLight = new THREE.PointLight(0xffeedd, 0.8, 12, 2);
+            pLight.position.y = 4.2;
+            g.add(pLight);
+
+            g.position.set(x, 0, z);
+            scene.add(g);
+        }
+
+        const lampPositions = [
+            [-5, -5], [5, -5], [-5, 5], [5, 5],
+            [-12, -12], [12, -12], [-12, 12], [12, 12],
+            [0, -20], [0, 20], [-20, 0], [20, 0]
+        ];
+        lampPositions.forEach(([x, z]) => createLamp(x, z));
+
+        // Decorative floating crystals (portal-like elements inspired by reference)
+        function createCrystal(x, y, z, color, scale = 1) {
+            const geo = new THREE.OctahedronGeometry(0.4 * scale, 0);
+            const mat = new THREE.MeshStandardMaterial({
+                color: color,
+                emissive: color,
+                emissiveIntensity: 0.8,
+                roughness: 0.1,
+                metalness: 0.9,
+                transparent: true,
+                opacity: 0.7
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+            return mesh;
+        }
+
+        const crystals = [];
+        for (let i = 0; i < 20; i++) {
+            const angle = (i / 20) * Math.PI * 2;
+            const r = 30 + Math.random() * 15;
+            const colors = [0xff3cac, 0x784ba0, 0x2b86c5, 0x00e5a0, 0xff6b35];
+            const c = createCrystal(
+                Math.cos(angle) * r,
+                3 + Math.random() * 4,
+                Math.sin(angle) * r,
+                colors[i % 5],
+                0.5 + Math.random() * 1.5
+            );
+            crystals.push({ mesh: c, baseY: c.position.y, speed: 0.5 + Math.random() * 1.5, offset: Math.random() * Math.PI * 2 });
+        }
+
+        // Central monument
+        const monumentGroup = new THREE.Group();
+        const monBaseGeo = new THREE.CylinderGeometry(2, 2.5, 1, 8);
+        const monBaseMat = createPBR(0x1a1535, 0.5, 0.5);
+        const monBase = new THREE.Mesh(monBaseGeo, monBaseMat);
+        monBase.position.y = 0.5;
+        monBase.castShadow = true;
+        monBase.receiveShadow = true;
+        monumentGroup.add(monBase);
+
+        const monPillarGeo = new THREE.CylinderGeometry(0.3, 0.5, 4, 8);
+        const monPillarMat = new THREE.MeshStandardMaterial({
+            color: 0x2a2050,
+            roughness: 0.2,
+            metalness: 0.8,
+            emissive: 0xff3cac,
+            emissiveIntensity: 0.1
+        });
+        const monPillar = new THREE.Mesh(monPillarGeo, monPillarMat);
+        monPillar.position.y = 3;
+        monPillar.castShadow = true;
+        monumentGroup.add(monPillar);
+
+        const monOrbGeo = new THREE.IcosahedronGeometry(0.6, 2);
+        const monOrbMat = new THREE.MeshStandardMaterial({
+            color: 0xff3cac,
+            emissive: 0xff3cac,
+            emissiveIntensity: 1.0,
+            roughness: 0.0,
+            metalness: 1.0
+        });
+        const monOrb = new THREE.Mesh(monOrbGeo, monOrbMat);
+        monOrb.position.y = 5.5;
+        monumentGroup.add(monOrb);
+
+        const monLight = new THREE.PointLight(0xff3cac, 3, 20, 2);
+        monLight.position.y = 5.5;
+        monumentGroup.add(monLight);
+
+        scene.add(monumentGroup);
+        allColliders.push(new THREE.Box3(new THREE.Vector3(-3, 0, -3), new THREE.Vector3(3, 6, 3)));
+
+        // ─── STARFIELD ───
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsVertices = [];
+        const starsColors = [];
+        for (let i = 0; i < 12000; i++) {
+            const x = (Math.random() - 0.5) * 800;
+            const y = Math.random() * 300 + 20;
+            const z = (Math.random() - 0.5) * 800;
+            starsVertices.push(x, y, z);
+            const c = new THREE.Color();
+            c.setHSL(Math.random() * 0.2 + 0.6, 0.4, 0.7 + Math.random() * 0.3);
+            starsColors.push(c.r, c.g, c.b);
+        }
+        starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+        starsGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starsColors, 3));
+        const starsMaterial = new THREE.PointsMaterial({
+            size: 0.3,
+            transparent: true,
+            opacity: 0.7,
+            vertexColors: true,
+            sizeAttenuation: true
+        });
+        scene.add(new THREE.Points(starsGeometry, starsMaterial));
+
+        // ─── PLAYER MODEL ───
+        const playerGroup = new THREE.Group();
+        scene.add(playerGroup);
+        let playerModelBuilt = false;
+
+        function buildPlayerModel(char) {
+            // Clear old
+            while (playerGroup.children.length) playerGroup.remove(playerGroup.children[0]);
+
+            const bodyColor = new THREE.Color(char.bodyColor);
+            const headColor = new THREE.Color(char.headColor);
+            const accentColor = new THREE.Color(char.accentColor);
+            const hairColor = new THREE.Color(char.hairColor);
+
+            // Body / torso
+            const torsoGeo = new THREE.BoxGeometry(0.5, 0.6, 0.3);
+            const torsoMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.5, metalness: 0.3, emissive: bodyColor, emissiveIntensity: 0.05 });
+            const torso = new THREE.Mesh(torsoGeo, torsoMat);
+            torso.position.y = 1.05;
+            torso.castShadow = true;
+            playerGroup.add(torso);
+
+            // Belt accent
+            const beltGeo = new THREE.BoxGeometry(0.52, 0.06, 0.32);
+            const beltMat = new THREE.MeshStandardMaterial({ color: accentColor, emissive: accentColor, emissiveIntensity: 0.4, roughness: 0.2, metalness: 0.8 });
+            const belt = new THREE.Mesh(beltGeo, beltMat);
+            belt.position.y = 0.78;
+            belt.castShadow = true;
+            playerGroup.add(belt);
+
+            // Head
+            const headGeo = new THREE.SphereGeometry(0.2, 16, 16);
+            const headMat = new THREE.MeshStandardMaterial({ color: headColor, roughness: 0.6, metalness: 0.1 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.55;
+            head.castShadow = true;
+            playerGroup.add(head);
+
+            // Eyes (emissive)
+            const eyeGeo = new THREE.SphereGeometry(0.03, 8, 8);
+            const eyeMat = new THREE.MeshStandardMaterial({ color: accentColor, emissive: accentColor, emissiveIntensity: 1.5, roughness: 0.1 });
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeL.position.set(-0.07, 1.56, -0.17);
+            playerGroup.add(eyeL);
+            const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeR.position.set(0.07, 1.56, -0.17);
+            playerGroup.add(eyeR);
+
+            // Hair
+            const hMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.7, metalness: 0.1 });
+            switch(char.hairStyle) {
+                case 'spiky':
+                    for(let i = -2; i <= 2; i++) {
+                        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 6), hMat);
+                        spike.position.set(i*0.07, 1.78, 0);
+                        spike.castShadow = true;
+                        playerGroup.add(spike);
+                    }
+                    break;
+                case 'mohawk':
+                    const mhk = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.22, 0.3), hMat);
+                    mhk.position.set(0, 1.8, -0.02);
+                    mhk.castShadow = true;
+                    playerGroup.add(mhk);
+                    break;
+                case 'long':
+                    const lh = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.35, 0.25), hMat);
+                    lh.position.set(0, 1.55, -0.1);
+                    lh.castShadow = true;
+                    playerGroup.add(lh);
+                    break;
+                case 'short':
+                    const sh = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8, 0, Math.PI*2, 0, Math.PI*0.6), hMat);
+                    sh.position.set(0, 1.6, 0);
+                    sh.castShadow = true;
+                    playerGroup.add(sh);
+                    break;
+                case 'bob':
+                    const bb = new THREE.Mesh(new THREE.SphereGeometry(0.23, 12, 12), hMat);
+                    bb.position.set(0, 1.58, -0.03);
+                    bb.castShadow = true;
+                    playerGroup.add(bb);
+                    break;
+                case 'bun':
+                    const bn = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 10), hMat);
+                    bn.position.set(0, 1.82, -0.05);
+                    bn.castShadow = true;
+                    playerGroup.add(bn);
+                    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.21, 12, 8, 0, Math.PI*2, 0, Math.PI*0.5), hMat);
+                    cap.position.set(0, 1.62, 0);
+                    cap.castShadow = true;
+                    playerGroup.add(cap);
+                    break;
+                case 'flat':
+                    const fl = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.4), hMat);
+                    fl.position.set(0, 1.76, 0);
+                    fl.castShadow = true;
+                    playerGroup.add(fl);
+                    break;
+                case 'wavy':
+                    const wv = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8, 0, Math.PI*2, 0, Math.PI*0.55), hMat);
+                    wv.position.set(0, 1.6, 0);
+                    wv.castShadow = true;
+                    playerGroup.add(wv);
+                    const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.2, 0.12), hMat);
+                    sideL.position.set(-0.2, 1.5, -0.05);
+                    playerGroup.add(sideL);
+                    const sideR = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.2, 0.12), hMat);
+                    sideR.position.set(0.2, 1.5, -0.05);
+                    playerGroup.add(sideR);
+                    break;
+                case 'twin':
+                    const twL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), hMat);
+                    twL.position.set(-0.2, 1.75, 0);
+                    twL.castShadow = true;
+                    playerGroup.add(twL);
+                    const twR = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), hMat);
+                    twR.position.set(0.2, 1.75, 0);
+                    twR.castShadow = true;
+                    playerGroup.add(twR);
+                    const topH = new THREE.Mesh(new THREE.SphereGeometry(0.21, 12, 8, 0, Math.PI*2, 0, Math.PI*0.5), hMat);
+                    topH.position.set(0, 1.62, 0);
+                    topH.castShadow = true;
+                    playerGroup.add(topH);
+                    break;
+            }
+
+            // Arms
+            const armGeo = new THREE.BoxGeometry(0.12, 0.45, 0.14);
+            const armMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.5, metalness: 0.3 });
+            const armL = new THREE.Mesh(armGeo, armMat);
+            armL.position.set(-0.35, 0.95, 0);
+            armL.castShadow = true;
+            armL.name = 'armL';
+            playerGroup.add(armL);
+            const armR = new THREE.Mesh(armGeo, armMat);
+            armR.position.set(0.35, 0.95, 0);
+            armR.castShadow = true;
+            armR.name = 'armR';
+            playerGroup.add(armR);
+
+            // Legs
+            const legGeo = new THREE.BoxGeometry(0.15, 0.45, 0.16);
+            const legMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(char.bodyColor).multiplyScalar(0.6), roughness: 0.6, metalness: 0.2 });
+            const legL = new THREE.Mesh(legGeo, legMat);
+            legL.position.set(-0.12, 0.5, 0);
+            legL.castShadow = true;
+            legL.name = 'legL';
+            playerGroup.add(legL);
+            const legR = new THREE.Mesh(legGeo, legMat);
+            legR.position.set(0.12, 0.5, 0);
+            legR.castShadow = true;
+            legR.name = 'legR';
+            playerGroup.add(legR);
+
+            // Boot accents
+            const bootGeo = new THREE.BoxGeometry(0.16, 0.08, 0.18);
+            const bootMat = new THREE.MeshStandardMaterial({ color: accentColor, emissive: accentColor, emissiveIntensity: 0.3, roughness: 0.3, metalness: 0.6 });
+            const bootL = new THREE.Mesh(bootGeo, bootMat);
+            bootL.position.set(-0.12, 0.3, 0);
+            playerGroup.add(bootL);
+            const bootR = new THREE.Mesh(bootGeo, bootMat);
+            bootR.position.set(0.12, 0.3, 0);
+            playerGroup.add(bootR);
+
+            // Small point light under player for accent glow
+            const pGlow = new THREE.PointLight(accentColor, 0.5, 4, 2);
+            pGlow.position.set(0, 0.3, 0);
+            playerGroup.add(pGlow);
+
+            playerModelBuilt = true;
+        }
+
+        // ─── PLAYER / CONTROLS ───
+        const player = {
+            position: new THREE.Vector3(0, 1.7, 12),
+            velocity: new THREE.Vector3(),
+            yaw: Math.PI,
+            pitch: 0,
+            speed: 8,
+            sprintSpeed: 15,
+            friction: 0.88
+        };
+
+        // Sprint / stamina system
+        const stamina = {
+            current: 100,
+            max: 100,
+            drainRate: 28,        // per second while sprinting
+            rechargeRate: 18,     // per second while not sprinting
+            rechargeDelay: 0.8,   // seconds after releasing sprint before recharge begins
+            depleted: false,      // true when fully drained — must recharge to threshold
+            depletedThreshold: 30,// must recharge to this % before sprinting again
+            cooldownTimer: 0,     // tracks time since last sprint
+            isSprinting: false
+        };
+
+        const staminaBarEl = document.getElementById('stamina-bar');
+        const staminaContainerEl = document.getElementById('stamina-container');
+        const sprintIndicatorEl = document.getElementById('sprint-indicator');
+
+        // Third person camera offset
+        const cameraOffset = new THREE.Vector3(0, 3.2, 5.5);
+        const cameraLookOffset = new THREE.Vector3(0, 1.2, 0);
+
+        camera.position.set(0, 4.9, 17.5);
+
+        const keys = {};
+        let isLocked = false;
+        let shopOpen = false;
+        let nearShop = null;
+        let stepTimer = 0;
+        let teleporting = false;
+        let teleportTarget = null;
+        let teleportProgress = 0;
+
+        document.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if (e.code === 'KeyE' && nearShop !== null && !shopOpen) openShop(nearShop);
+            else if (e.code === 'Escape' && shopOpen) closeShop();
+        });
+        document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+        document.addEventListener('mousemove', e => {
+            if (!isLocked) return;
+            player.yaw -= e.movementX * 0.002;
+            player.pitch -= e.movementY * 0.002;
+            player.pitch = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, player.pitch));
+        });
+
+        renderer.domElement.addEventListener('click', () => {
+            if (!isLocked && !shopOpen) {
+                try { renderer.domElement.requestPointerLock(); } catch(e) {}
+            }
+        });
+        document.addEventListener('pointerlockchange', () => {
+            isLocked = document.pointerLockElement === renderer.domElement;
+        });
+
+        // ─── MINIMAP CLICK TELEPORT ───
+        const minimapEl = document.getElementById('minimap');
+        const teleportFlash = document.getElementById('teleport-flash');
+
+        minimapEl.addEventListener('click', (e) => {
+            if (shopOpen || teleporting) return;
+            const rect = minimapEl.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+
+            const scale = 2;
+            const cx = 80, cy = 80;
+
+            // Find closest shop to the click point on minimap
+            let bestShop = null, bestDist = Infinity;
+            SHOPS.forEach((s, i) => {
+                const sx = cx + (s.position.x - player.position.x) * scale;
+                const sy = cy + (s.position.z - player.position.z) * scale;
+                const d = Math.hypot(mx - sx, my - sy);
+                if (d < bestDist) { bestDist = d; bestShop = s; }
+            });
+
+            if (bestShop && bestDist < 60) {
+                // Teleport to nearby radius of shop (in front of it)
+                const frontDir = new THREE.Vector3(
+                    Math.sin(bestShop.rotation),
+                    0,
+                    Math.cos(bestShop.rotation)
+                );
+                const targetPos = new THREE.Vector3(
+                    bestShop.position.x + frontDir.x * 9,
+                    1.7,
+                    bestShop.position.z + frontDir.z * 9
+                );
+
+                // Check bounds
+                const dist = Math.hypot(targetPos.x, targetPos.z);
+                if (dist > 65) {
+                    targetPos.x *= 65 / dist;
+                    targetPos.z *= 65 / dist;
+                }
+
+                teleporting = true;
+                teleportTarget = targetPos;
+                teleportProgress = 0;
+
+                // Flash effect
+                teleportFlash.classList.add('active');
+                setTimeout(() => teleportFlash.classList.remove('active'), 300);
+
+                playTone(600, 0.2, 0.05, 'sine');
+                setTimeout(() => playTone(900, 0.15, 0.04, 'sine'), 100);
+                setTimeout(() => playTone(1200, 0.1, 0.03, 'sine'), 200);
+            }
+            e.stopPropagation();
+        });
+
+        // ─── COLLISION ───
+        function checkCollision(newPos) {
+            const playerBox = new THREE.Box3(
+                new THREE.Vector3(newPos.x - 0.4, 0, newPos.z - 0.4),
+                new THREE.Vector3(newPos.x + 0.4, 2, newPos.z + 0.4)
+            );
+            for (const box of allColliders) {
+                if (playerBox.intersectsBox(box)) return true;
+            }
+            return false;
+        }
+
+        // ─── SHOP INTERACTIONS ───
+        const promptEl = document.getElementById('interact-prompt');
+        const crosshairEl = document.getElementById('crosshair');
+        const panelEl = document.getElementById('shop-panel');
+
+        function openShop(index) {
+            shopOpen = true;
+            const shop = SHOPS[index];
+            playOpen();
+
+            document.getElementById('panel-category').textContent = shop.category;
+            document.getElementById('panel-name').textContent = shop.name;
+            document.getElementById('panel-desc').textContent = shop.desc;
+
+            const aiEl = document.getElementById('ai-text');
+            aiEl.innerHTML = '<span class="ai-analyzing">Analyzing marketplace data...</span>';
+
+            const prodList = document.getElementById('products-list');
+            prodList.innerHTML = '';
+
+            panelEl.classList.add('open');
+            promptEl.classList.remove('visible');
+
+            if (document.pointerLockElement) document.exitPointerLock();
+
+            // AI delay
+            setTimeout(() => {
+                aiEl.textContent = shop.ai;
+                playInteract();
+
+                shop.products.forEach((p, i) => {
+                    setTimeout(() => {
+                        const card = document.createElement('div');
+                        card.className = 'product-card' + (p.recommended ? ' recommended' : '');
+                        card.innerHTML = `
+                            <div class="product-name">${p.name}</div>
+                            <div class="product-meta">
+                                <div class="product-price">${p.price}</div>
+                                <div class="product-rating">★ ${p.rating}</div>
+                            </div>
+                            <div class="product-tags">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+                            <div class="product-desc">${p.desc}</div>
+                            <button class="buy-btn" onclick="initEscrow('${p.name.replace(/'/g, "\\'")}', '${p.price}')">Buy w/ Test Tokens</button>
+                        `;
+                        prodList.appendChild(card);
+                    }, 150 * (i + 1));
+                });
+            }, 1200);
+        }
+
+        window.closeShop = function() {
+            shopOpen = false;
+            panelEl.classList.remove('open');
+            document.getElementById('escrow-panel').classList.remove('active');
+            playClose();
+            setTimeout(() => {
+                try { renderer.domElement.requestPointerLock(); } catch(e) {}
+            }, 200);
+        };
+
+        window.initEscrow = function(name, price) {
+            const panel = document.getElementById('escrow-panel');
+            document.getElementById('escrow-prod-name').textContent = name;
+            document.getElementById('escrow-prod-price').textContent = price;
+            panel.classList.add('active');
+            playOpen();
+            
+            for(let i=1; i<=4; i++) {
+                document.getElementById('step-'+i).className = 'escrow-step';
+            }
+            document.getElementById('escrow-close-btn').style.display = 'none';
+            
+            let step = 1;
+            document.getElementById('step-1').classList.add('active');
+            
+            const advance = () => {
+                if (!shopOpen || !panel.classList.contains('active')) return;
+                document.getElementById('step-'+step).classList.add('done');
+                step++;
+                if (step <= 4) {
+                    document.getElementById('step-'+step).classList.add('active');
+                    playTone(800 + step*200, 0.1, 0.03, 'sine');
+                    setTimeout(advance, step === 3 ? 2500 : 1200);
+                } else {
+                    document.getElementById('escrow-close-btn').style.display = 'block';
+                    playTone(600, 0.1, 0.04, 'sine'); setTimeout(()=>playTone(900, 0.15, 0.04, 'sine'), 100);
+                }
+            };
+            setTimeout(advance, 1200);
+        };
+        
+        window.closeEscrow = function() {
+            document.getElementById('escrow-panel').classList.remove('active');
+            playClose();
+        };
+
+        // ─── MINIMAP ───
+        const minimapCanvas = document.getElementById('minimap-canvas');
+        const mctx = minimapCanvas.getContext('2d');
+
+        function drawMinimap() {
+            mctx.fillStyle = 'rgba(8,6,26,0.9)';
+            mctx.fillRect(0, 0, 160, 160);
+
+            const scale = 2;
+            const cx = 80, cy = 80;
+
+            // Grid lines for depth
+            mctx.strokeStyle = 'rgba(255,255,255,0.03)';
+            mctx.lineWidth = 0.5;
+            for (let i = 0; i < 160; i += 20) {
+                mctx.beginPath(); mctx.moveTo(i, 0); mctx.lineTo(i, 160); mctx.stroke();
+                mctx.beginPath(); mctx.moveTo(0, i); mctx.lineTo(160, i); mctx.stroke();
+            }
+
+            // Paths to shops
+            SHOPS.forEach(s => {
+                const sx = cx + (s.position.x - player.position.x) * scale;
+                const sy = cy + (s.position.z - player.position.z) * scale;
+                mctx.strokeStyle = 'rgba(' + ((s.color >> 16) & 255) + ',' + ((s.color >> 8) & 255) + ',' + (s.color & 255) + ',0.12)';
+                mctx.lineWidth = 1;
+                mctx.beginPath();
+                mctx.moveTo(cx, cy);
+                mctx.lineTo(sx, sy);
+                mctx.stroke();
+            });
+
+            // Shops (bigger, with glow and labels)
+            SHOPS.forEach(s => {
+                const sx = cx + (s.position.x - player.position.x) * scale;
+                const sy = cy + (s.position.z - player.position.z) * scale;
+                if (sx < -10 || sx > 170 || sy < -10 || sy > 170) return;
+
+                const hex = '#' + new THREE.Color(s.color).getHexString();
+                const r = ((s.color >> 16) & 255);
+                const g = ((s.color >> 8) & 255);
+                const b = (s.color & 255);
+
+                // Glow ring
+                mctx.strokeStyle = `rgba(${r},${g},${b},0.3)`;
+                mctx.lineWidth = 1.5;
+                mctx.beginPath();
+                mctx.arc(sx, sy, 7, 0, Math.PI * 2);
+                mctx.stroke();
+
+                // Filled dot
+                mctx.fillStyle = hex;
+                mctx.beginPath();
+                mctx.arc(sx, sy, 4, 0, Math.PI * 2);
+                mctx.fill();
+
+                // Name label
+                mctx.fillStyle = 'rgba(255,255,255,0.4)';
+                mctx.font = '7px Segoe UI';
+                mctx.textAlign = 'center';
+                mctx.fillText(s.name, sx, sy + 14);
+            });
+
+            // Player (triangle showing direction)
+            mctx.save();
+            mctx.translate(cx, cy);
+            mctx.rotate(-player.yaw + Math.PI);
+            mctx.fillStyle = '#fff';
+            mctx.beginPath();
+            mctx.moveTo(0, -5);
+            mctx.lineTo(-3.5, 4);
+            mctx.lineTo(3.5, 4);
+            mctx.closePath();
+            mctx.fill();
+
+            // Player glow
+            mctx.shadowColor = '#ff3cac';
+            mctx.shadowBlur = 6;
+            mctx.fillStyle = 'rgba(255,60,172,0.6)';
+            mctx.beginPath();
+            mctx.arc(0, 0, 2, 0, Math.PI * 2);
+            mctx.fill();
+            mctx.shadowBlur = 0;
+            mctx.restore();
+
+            // Border
+            mctx.strokeStyle = 'rgba(255,60,172,0.15)';
+            mctx.lineWidth = 1;
+            mctx.strokeRect(0, 0, 160, 160);
+        }
+
+        // ─── INIT CHARACTER SELECT ───
+        initCharSelect();
+
+        // ─── LOADING ───
+        let loadProgress = 0;
+        const loaderBar = document.getElementById('loader-bar');
+        const loaderText = document.getElementById('loader-text');
+        const loadingScreen = document.getElementById('loading-screen');
+        const clickStart = document.getElementById('click-start');
+
+        const loadMsgs = ['Initializing world...', 'Generating terrain...', 'Placing shops...', 'Loading AI systems...', 'Preparing marketplace...', 'Almost ready...'];
+        function simulateLoading() {
+            if (loadProgress < 100) {
+                loadProgress += 2 + Math.random() * 4;
+                if (loadProgress > 100) loadProgress = 100;
+                loaderBar.style.width = loadProgress + '%';
+                loaderText.textContent = loadMsgs[Math.min(Math.floor(loadProgress / 18), loadMsgs.length - 1)];
+                requestAnimationFrame(() => setTimeout(simulateLoading, 30 + Math.random() * 50));
+            } else {
+                setTimeout(() => {
+                    loadingScreen.classList.add('hidden');
+                    document.getElementById('char-select-screen').classList.add('show');
+                }, 400);
+            }
+        }
+        simulateLoading();
+
+        clickStart.addEventListener('click', () => {
+            clickStart.classList.remove('show');
+            try { renderer.domElement.requestPointerLock(); } catch(e) {}
+            ensureAudio();
+        });
+
+        // Handle minimap pointer events
+        minimapEl.style.pointerEvents = 'auto';
+
+        // ─── ZONE DETECTION ───
+        const zoneEl = document.getElementById('current-zone');
+        function updateZone() {
+            let closest = null, closestDist = Infinity;
+            SHOPS.forEach(s => {
+                const d = Math.hypot(player.position.x - s.position.x, player.position.z - s.position.z);
+                if (d < closestDist) { closestDist = d; closest = s; }
+            });
+            if (closestDist < 15) zoneEl.textContent = closest.name + ' Zone';
+            else zoneEl.textContent = 'Central Plaza';
+        }
+
+        // ─── ANIMATION ───
+        let time = 0;
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = Math.min(clock.getDelta(), 0.05);
+            time += delta;
+
+            // Player movement
+            if (isLocked && !shopOpen) {
+                const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+                const right = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
+
+                const accel = new THREE.Vector3();
+                if (keys['KeyW']) accel.add(forward);
+                if (keys['KeyS']) accel.sub(forward);
+                if (keys['KeyA']) accel.sub(right);
+                if (keys['KeyD']) accel.add(right);
+
+                const isMoving = accel.length() > 0;
+                const wantsSprint = keys['ShiftLeft'] || keys['ShiftRight'];
+
+                // Sprint logic
+                let canSprint = wantsSprint && isMoving && !stamina.depleted && stamina.current > 0;
+                stamina.isSprinting = canSprint;
+
+                if (canSprint) {
+                    stamina.current -= stamina.drainRate * delta;
+                    stamina.cooldownTimer = 0;
+                    if (stamina.current <= 0) {
+                        stamina.current = 0;
+                        stamina.depleted = true;
+                        stamina.isSprinting = false;
+                        playTone(200, 0.25, 0.04, 'triangle'); // depleted sound
+                    }
+                } else {
+                    stamina.cooldownTimer += delta;
+                    if (stamina.cooldownTimer >= stamina.rechargeDelay && stamina.current < stamina.max) {
+                        stamina.current += stamina.rechargeRate * delta;
+                        if (stamina.current >= stamina.max) stamina.current = stamina.max;
+                    }
+                    if (stamina.depleted && stamina.current >= stamina.depletedThreshold) {
+                        stamina.depleted = false;
+                        playTone(500, 0.1, 0.03, 'sine'); // recovered sound
+                    }
+                }
+
+                // Stamina UI
+                const pct = stamina.current / stamina.max * 100;
+                staminaBarEl.style.width = pct + '%';
+                staminaBarEl.classList.toggle('depleted', stamina.depleted);
+                staminaBarEl.classList.toggle('recovering', !stamina.depleted && !stamina.isSprinting && stamina.cooldownTimer >= stamina.rechargeDelay && stamina.current < stamina.max);
+                staminaContainerEl.classList.toggle('visible', stamina.current < stamina.max || stamina.isSprinting);
+                sprintIndicatorEl.classList.toggle('visible', stamina.isSprinting);
+
+                const currentSpeed = stamina.isSprinting ? player.sprintSpeed : player.speed;
+
+                if (isMoving) {
+                    accel.normalize().multiplyScalar(currentSpeed * delta);
+                    player.velocity.add(accel);
+
+                    const stepInterval = stamina.isSprinting ? 0.22 : 0.35;
+                    stepTimer += delta;
+                    if (stepTimer > stepInterval) {
+                        playStep();
+                        stepTimer = 0;
+                    }
+                }
+
+                player.velocity.multiplyScalar(player.friction);
+
+                // Collision X
+                const newPosX = player.position.clone();
+                newPosX.x += player.velocity.x;
+                if (!checkCollision(newPosX)) player.position.x = newPosX.x;
+                else player.velocity.x = 0;
+
+                // Collision Z
+                const newPosZ = player.position.clone();
+                newPosZ.z += player.velocity.z;
+                if (!checkCollision(newPosZ)) player.position.z = newPosZ.z;
+                else player.velocity.z = 0;
+
+                // Boundary
+                const dist = Math.hypot(player.position.x, player.position.z);
+                if (dist > 70) {
+                    player.position.x *= 70 / dist;
+                    player.position.z *= 70 / dist;
+                }
+
+                const bobFreq = stamina.isSprinting ? 8 : 5;
+                const bobAmp = stamina.isSprinting ? 0.055 : 0.03;
+                player.position.y = 1.7 + Math.sin(time * bobFreq) * bobAmp * Math.min(player.velocity.length() * 3, 1);
+            }
+
+            // Teleport interpolation
+            if (teleporting && teleportTarget) {
+                teleportProgress += delta * 2.5;
+                if (teleportProgress >= 1) {
+                    player.position.copy(teleportTarget);
+                    player.position.y = 1.7;
+                    player.velocity.set(0, 0, 0);
+                    teleporting = false;
+                    teleportTarget = null;
+                } else {
+                    const t = teleportProgress;
+                    const ease = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+                    player.position.lerpVectors(player.position, teleportTarget, ease * 0.1);
+                    player.position.y = 1.7 + Math.sin(teleportProgress * Math.PI) * 3;
+                }
+            }
+
+            // Update player model position + rotation
+            if (playerModelBuilt) {
+                playerGroup.position.set(player.position.x, 0, player.position.z);
+                playerGroup.rotation.y = player.yaw + Math.PI;
+
+                // Walk animation (swing arms/legs) — faster when sprinting
+                const walkSpeed = Math.min(player.velocity.length() * 4, 1);
+                const animFreq = stamina.isSprinting ? 16 : 10;
+                const animAmp = stamina.isSprinting ? 0.75 : 0.5;
+                const swing = Math.sin(time * animFreq) * animAmp * walkSpeed;
+                playerGroup.traverse(child => {
+                    if (child.name === 'armL') child.rotation.x = swing;
+                    else if (child.name === 'armR') child.rotation.x = -swing;
+                    else if (child.name === 'legL') child.rotation.x = -swing * 0.7;
+                    else if (child.name === 'legR') child.rotation.x = swing * 0.7;
+                });
+
+                    // Subtle body bob — amplified when sprinting
+                const bodyBobFreq = stamina.isSprinting ? 16 : 10;
+                const bodyBobAmp = stamina.isSprinting ? 0.05 : 0.03;
+                playerGroup.position.y = Math.sin(time * bodyBobFreq) * bodyBobAmp * walkSpeed;
+
+                // Lean forward when sprinting
+                const leanTarget = stamina.isSprinting ? 0.12 : 0;
+                playerGroup.children.forEach(child => {
+                    if (child.position && child.position.y > 0.8) {
+                        // Torso, head etc lean forward slightly
+                    }
+                });
+                // Apply torso lean on first child (torso)
+                if (playerGroup.children[0]) {
+                    const currentLean = playerGroup.children[0].rotation.x || 0;
+                    playerGroup.children[0].rotation.x += (leanTarget - currentLean) * 0.1;
+                }
+            }
+
+            // Third-person camera — pulls back slightly when sprinting for a speed feel
+            const camYaw = player.yaw;
+            const camPitch = player.pitch;
+            const sprintCamPull = stamina.isSprinting ? 1.4 : 0;
+            const dynamicOffset = cameraOffset.clone();
+            dynamicOffset.z += sprintCamPull;
+            dynamicOffset.y -= sprintCamPull * 0.15;
+            dynamicOffset.applyAxisAngle(new THREE.Vector3(0,1,0), camYaw);
+            const idealPos = player.position.clone().add(dynamicOffset);
+            idealPos.y = player.position.y + cameraOffset.y - sprintCamPull * 0.15 + Math.sin(camPitch) * -2;
+            const camLerpSpeed = stamina.isSprinting ? 0.06 : 0.08;
+            camera.position.lerp(idealPos, camLerpSpeed);
+
+            const lookTarget = player.position.clone().add(cameraLookOffset);
+            camera.lookAt(lookTarget);
+
+            // Shop proximity
+            nearShop = null;
+            let minDist = Infinity;
+            shopMeshes.forEach((sm, i) => {
+                const d = Math.hypot(
+                    player.position.x - sm.data.position.x,
+                    player.position.z - sm.data.position.z
+                );
+
+                const isNear = d < 10;
+                const glowTarget = isNear ? 1.5 : 1.0;
+                const emTarget = isNear ? 0.08 : 0.02;
+
+                // Animate glow
+                sm.glowMeshes.forEach((m, j) => {
+                    const target = isNear ? sm.originalEmissiveIntensities[j] * 2 : sm.originalEmissiveIntensities[j];
+                    m.material.emissiveIntensity += (target - m.material.emissiveIntensity) * 0.1;
+                });
+
+                sm.light.intensity += ((isNear ? 4 : 2) - sm.light.intensity) * 0.1;
+
+                if (d < 10 && d < minDist) {
+                    minDist = d;
+                    nearShop = i;
+                }
+            });
+
+            if (nearShop !== null && !shopOpen) {
+                promptEl.classList.add('visible');
+                promptEl.innerHTML = `Press <kbd>E</kbd> to enter <strong>${SHOPS[nearShop].name}</strong>`;
+                crosshairEl.classList.add('active');
+            } else {
+                promptEl.classList.remove('visible');
+                crosshairEl.classList.remove('active');
+            }
+
+            // Animate crystals
+            crystals.forEach(c => {
+                c.mesh.position.y = c.baseY + Math.sin(time * c.speed + c.offset) * 0.8;
+                c.mesh.rotation.y += delta * 0.5;
+                c.mesh.rotation.x += delta * 0.3;
+            });
+
+            // Monument orb
+            monOrb.rotation.y += delta * 0.8;
+            monOrb.rotation.x = Math.sin(time) * 0.3;
+            monOrb.position.y = 5.5 + Math.sin(time * 1.5) * 0.3;
+            monLight.intensity = 3 + Math.sin(time * 2) * 1;
+
+            // Subtle star twinkling
+            starsMaterial.opacity = 0.5 + Math.sin(time * 1.5) * 0.15;
+
+            // Update zone
+            if (Math.floor(time * 2) % 2 === 0) updateZone();
+
+            // Minimap (with clickable shop indicators)
+            drawMinimap();
+
+            renderer.render(scene, camera);
+        }
+
+        // ─── RESIZE ───
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/* ===== Design Tokens (from docs/design/design-system.md) ===== */
+@theme {
+  --color-bg-deep: #050b1a;
+  --color-bg-panel: #0b1730;
+  --color-bg-panel-strong: #081126;
+  --color-line-panel: rgba(5, 231, 255, 0.28);
+  --color-line-strong: rgba(5, 231, 255, 0.64);
+  --color-accent-cyan: #05e7ff;
+  --color-accent-lime: #8dffb3;
+  --color-accent-amber: #ffbf5f;
+  --color-text-primary: #f5fbff;
+  --color-text-secondary: #a7bfd9;
+  --color-text-muted: #6e86a7;
+  --color-danger: #ff647c;
+
+  --font-display: "Oswald", sans-serif;
+  --font-body: "Space Grotesk", sans-serif;
+}
+
+/* ===== Base resets ===== */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--color-bg-deep);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Scrollbar (dark theme) ===== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-deep);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-panel);
+  border-radius: 3px;
+}
+
+/* ===== Utility animations ===== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(5, 231, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(5, 231, 255, 0.5);
+  }
+}
+
+@keyframes scanLine {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out both;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+/* ===== Stagger children entrance ===== */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.6s; }
+
+/* ===== Grid background pattern ===== */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(5, 231, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(5, 231, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
