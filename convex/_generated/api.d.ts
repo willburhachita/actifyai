@@ -9,10 +9,13 @@
  */
 
 import type * as activity from "../activity.js";
+import type * as agent from "../agent.js";
 import type * as agentSettings from "../agentSettings.js";
 import type * as crons from "../crons.js";
 import type * as ebay from "../ebay.js";
 import type * as functions from "../functions.js";
+import type * as gemini from "../gemini.js";
+import type * as http from "../http.js";
 import type * as products from "../products.js";
 import type * as purchaseOrders from "../purchaseOrders.js";
 import type * as seed from "../seed.js";
@@ -30,10 +33,13 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   activity: typeof activity;
+  agent: typeof agent;
   agentSettings: typeof agentSettings;
   crons: typeof crons;
   ebay: typeof ebay;
   functions: typeof functions;
+  gemini: typeof gemini;
+  http: typeof http;
   products: typeof products;
   purchaseOrders: typeof purchaseOrders;
   seed: typeof seed;

@@ -85,3 +85,20 @@ export const updateAvatar = mutation({
     await ctx.db.patch(user._id, { avatar: args.avatar });
   },
 });
+
+export const linkWhatsAppDirect = mutation({
+  args: {
+    auth0Id: v.string(),
+    whatsappId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_auth0Id", (q) => q.eq("auth0Id", args.auth0Id))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(user._id, { whatsappId: args.whatsappId });
+  },
+});

@@ -41,6 +41,7 @@ export default function SettingsPage() {
   const updateAgentSettings = useMutation(api.agentSettings.updateAgentSettings);
   const generateWhatsAppVerificationCode = useMutation(api.agentSettings.generateWhatsAppVerificationCode);
   const unlinkWhatsApp = useMutation(api.agentSettings.unlinkWhatsApp);
+  const linkWhatsApp = useMutation(api.users.linkWhatsAppDirect);
 
   const [maxBudget, setMaxBudget] = useState(250);
   const [approvalThreshold, setApprovalThreshold] = useState(50);
@@ -66,6 +67,21 @@ export default function SettingsPage() {
     setPendingCode(agentSettings.pendingWhatsAppLink?.code ?? null);
     setPendingCodeExpiresAt(agentSettings.pendingWhatsAppLink?.expiresAt ?? null);
   }, [agentSettings]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && auth0Id) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const waLink = urlParams.get("wa");
+      if (waLink) {
+        linkWhatsApp({ auth0Id, whatsappId: waLink })
+          .then(() => {
+            setNotice({ type: "success", message: `WhatsApp number ${waLink} successfully linked!` });
+            window.history.replaceState({}, '', '/app/settings');
+          })
+          .catch(() => setNotice({ type: "error", message: "Failed to link WhatsApp via URL." }));
+      }
+    }
+  }, [auth0Id, linkWhatsApp]);
 
   const whatsAppInstructions = useMemo(() => {
     if (!pendingCode) return null;

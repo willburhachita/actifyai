@@ -14,6 +14,15 @@ export default defineSchema({
     verifiedOnly: v.boolean(),
     approvalThreshold: v.number(),
     agentPaused: v.optional(v.boolean()),
+    shippingAddress: v.optional(v.object({
+      firstName: v.string(),
+      lastName: v.string(),
+      addressLine1: v.string(),
+      city: v.string(),
+      stateOrProvince: v.string(),
+      postalCode: v.string(),
+      country: v.string()
+    })),
   }).index("by_auth0Id", ["auth0Id"])
     .index("by_whatsappId", ["whatsappId"]),
 
@@ -190,6 +199,7 @@ export default defineSchema({
     productTitle: v.string(),
     shopLabel: v.string(),
     productImage: v.optional(v.string()),
+    autoSettleAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_userId", ["userId"])
