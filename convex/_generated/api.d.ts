@@ -9,6 +9,7 @@
  */
 
 import type * as activity from "../activity.js";
+import type * as agentSettings from "../agentSettings.js";
 import type * as crons from "../crons.js";
 import type * as ebay from "../ebay.js";
 import type * as functions from "../functions.js";
@@ -16,8 +17,10 @@ import type * as products from "../products.js";
 import type * as purchaseOrders from "../purchaseOrders.js";
 import type * as seed from "../seed.js";
 import type * as shops from "../shops.js";
+import type * as system from "../system.js";
 import type * as users from "../users.js";
 import type * as wallets from "../wallets.js";
+import type * as whatsapp from "../whatsapp.js";
 
 import type {
   ApiFromModules,
@@ -27,6 +30,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   activity: typeof activity;
+  agentSettings: typeof agentSettings;
   crons: typeof crons;
   ebay: typeof ebay;
   functions: typeof functions;
@@ -34,8 +38,10 @@ declare const fullApi: ApiFromModules<{
   purchaseOrders: typeof purchaseOrders;
   seed: typeof seed;
   shops: typeof shops;
+  system: typeof system;
   users: typeof users;
   wallets: typeof wallets;
+  whatsapp: typeof whatsapp;
 }>;
 
 /**

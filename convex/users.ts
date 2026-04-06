@@ -39,9 +39,11 @@ export const syncAuth0User = mutation({
       email: args.email,
       avatar: args.avatar,
       maxBudget: 250,
-      allowedActions: ["browse", "checkout", "communicate"],
+      allowedActions: ["browse", "compare", "draft_purchase", "execute_purchase"],
+      allowedCategories: ["electronics", "fashion", "home", "sports", "collectibles"],
       verifiedOnly: true,
       approvalThreshold: 50,
+      agentPaused: false,
     });
   },
 });
