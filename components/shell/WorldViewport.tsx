@@ -76,7 +76,7 @@ export function WorldViewport({ children, onEbayCategory }: WorldViewportProps) 
         </div>
 
         {/* World content area */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-h-0">
           {isWorldRoute ? (
             <CommerceWorld onCategoryChange={handleCategoryChange} />
           ) : children}

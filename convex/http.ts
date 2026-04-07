@@ -15,8 +15,8 @@ http.route({
     const message = params.get("Body") || "";
     const from = params.get("From") || "";
 
-    // Normalize number, twilio sends "whatsapp:+1234567"
-    const whatsappId = from.replace("whatsapp:", "");
+    // Normalize number removing + to avoid URL encoding redirect bugs
+    const whatsappId = from.replace("whatsapp:", "").replace("+", "").trim();
 
     // Check if user is linked in the database
     const userContext = await ctx.runQuery(api.whatsapp.resolveWhatsAppUser, { whatsappId });
