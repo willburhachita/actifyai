@@ -8,7 +8,7 @@ export async function GET(
   const hasCredentials = !!(process.env.EBAY_APP_ID && process.env.EBAY_CERT_ID &&
     !process.env.EBAY_APP_ID.startsWith("YOUR_"));
 
-  if (hasCredentials) {
+  if (hasCredentials && !itemId.startsWith("mock-")) {
     const { getEbayItem } = await import("@/lib/ebay/client");
     try {
       const item = await getEbayItem(itemId);

@@ -1108,7 +1108,7 @@
 
         const treePositions = [
             [-8, -8], [8, -8], [-8, 8], [8, 8],
-            [-12, 0], [12, 0], [0, -12], [0, 12],
+            [-12, 0], [12, 0], [0, -12],
             [-25, -5], [25, 5], [-5, 25], [5, -25],
             [-30, 15], [30, -15], [-15, 30], [15, -30],
             [-22, 22], [22, -22], [-28, -20], [28, 20],
@@ -1907,7 +1907,19 @@
             } else {
                 setTimeout(() => {
                     loadingScreen.classList.add('hidden');
-                    document.getElementById('char-select-screen').classList.add('show');
+
+                    // Auto-enter if a character was previously selected
+                    const savedIdx = parseInt(localStorage.getItem('actify_char') ?? '-1', 10);
+                    if (savedIdx >= 0 && savedIdx < CHARACTERS.length) {
+                        selectedCharIndex = savedIdx;
+                        buildPlayerModel(CHARACTERS[savedIdx]);
+                        // Skip character select & click-to-start — go straight in
+                        ensureAudio();
+                        try { renderer.domElement.requestPointerLock(); } catch(e) {}
+                    } else {
+                        // First visit — show character select
+                        document.getElementById('char-select-screen').classList.add('show');
+                    }
                 }, 400);
             }
         }

@@ -100,3 +100,34 @@ export const markFaucetClaimed = mutation({
     await ctx.db.patch(wallet._id, { hasClaimed: true });
   },
 });
+
+export const buyTokens = mutation({
+  args: {
+    auth0Id: v.string(),
+    amountACT: v.number(),
+    amountETH: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_auth0Id", (q) => q.eq("auth0Id", args.auth0Id))
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const wallet = await ctx.db
+      .query("wallets")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .unique();
+    if (!wallet) throw new Error("Wallet not found");
+
+    await ctx.db.patch(wallet._id, { tokenBalance: wallet.tokenBalance + args.amountACT });
+
+    await ctx.db.insert("activityLog", {
+      userId: user._id,
+      type: "action",
+      title: "ACT Tokens Purchased",
+      detail: `Exchanged ${args.amountETH} ETH for ${args.amountACT} ACT.`,
+      createdAt: Date.now(),
+    });
+  },
+});

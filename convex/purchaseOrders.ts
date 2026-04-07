@@ -148,3 +148,41 @@ export const getOrderById = query({
     return await ctx.db.get(args.orderId);
   },
 });
+
+/** Auto-settle escrowed orders older than autoSettleAt or 5 min (cron job) */
+export const autoSettleEscrows = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const escrowedOrders = await ctx.db
+      .query("purchaseOrders")
+      .withIndex("by_status", (q) => q.eq("status", "escrowed"))
+      .take(50);
+
+    let settled = 0;
+    for (const order of escrowedOrders) {
+      // Auto-settle after 5 minutes (300000ms) or the specified autoSettleAt time
+      const settleTime = order.autoSettleAt ?? (order.createdAt + 5 * 60 * 1000);
+      if (now >= settleTime) {
+        await ctx.db.patch(order._id, {
+          status: "completed",
+          updatedAt: now,
+        });
+
+        await ctx.db.insert("activityLog", {
+          userId: order.userId,
+          orderId: order._id,
+          type: "action",
+          title: "Escrow auto-settled",
+          detail: `Order for ${order.productTitle} auto-completed after escrow period. ${order.tokenAmount} ACT released.`,
+          createdAt: now,
+        });
+
+        settled++;
+      }
+    }
+
+    return { settled };
+  },
+});
+

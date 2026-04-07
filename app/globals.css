@@ -104,3 +104,27 @@ body {
     linear-gradient(90deg, rgba(5, 231, 255, 0.03) 1px, transparent 1px);
   background-size: 40px 40px;
 }
+
+/* ===== ACTIFY Logo Loading Animation ===== */
+@keyframes actifySlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(var(--start-y, 120px)) scale(0.6);
+    color: transparent;
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(calc(var(--start-y, 120px) * -0.08)) scale(1.05);
+    color: #05e7ff;
+    text-shadow: 0 0 30px rgba(5, 231, 255, 0.6);
+    -webkit-text-stroke: 2px #05e7ff;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    color: #ffffff;
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+    -webkit-text-stroke: 2px rgba(255, 255, 255, 0.9);
+  }
+}
+

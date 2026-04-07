@@ -11,4 +11,12 @@ crons.cron(
   {}
 );
 
+// Auto-settle escrowed purchase orders every 5 minutes
+crons.interval(
+  "auto-settle-escrows",
+  { minutes: 5 },
+  api.purchaseOrders.autoSettleEscrows,
+  {}
+);
+
 export default crons;
