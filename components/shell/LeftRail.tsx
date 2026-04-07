@@ -41,6 +41,17 @@ const navItems = [
     ),
   },
   {
+    label: "Wallet",
+    href: "/app/wallet",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <rect x="2" y="4" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M12 9h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="14" cy="9" r="1" fill="currentColor" />
+      </svg>
+    ),
+  },
+  {
     label: "Settings",
     href: "/app/settings",
     icon: (
@@ -75,14 +86,16 @@ export function LeftRail() {
   return (
     <aside className="h-full bg-bg-panel-strong border-r border-line-panel flex flex-col">
       {/* Logo */}
-      <div className="px-5 h-16 flex items-center gap-2 border-b border-line-panel/50">
-        <div className="w-7 h-7 rounded-lg bg-accent-cyan/10 border border-accent-cyan/30 flex items-center justify-center animate-pulse-glow hover:rotate-180 transition-transform duration-700 ease-in-out cursor-pointer">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M8 1L14 5V11L8 15L2 11V5L8 1Z" stroke="#05e7ff" strokeWidth="1.5" fill="none" />
-            <circle cx="8" cy="8" r="2" fill="#05e7ff" />
+      <div className="px-5 h-16 flex items-center gap-3 border-b border-line-panel/50">
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-bg-deep to-bg-panel flex items-center justify-center border border-accent-cyan/20 shadow-[0_0_15px_rgba(5,231,255,0.15)] overflow-hidden">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L3 20h3l4-8h4l4 8h3L12 2z" fill="#05e7ff" />
+            <path d="M12 11l-1.5 3h3L12 11z" fill="#0a0a0a" />
+            <line x1="12" y1="2" x2="12" y2="6" stroke="#05e7ff" strokeWidth="2" />
+            <circle cx="12" cy="18" r="1.5" fill="#05e7ff" className="animate-pulse" />
           </svg>
         </div>
-        <span className="font-display text-sm font-semibold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-text-primary to-accent-cyan">
+        <span className="font-display text-sm font-semibold tracking-wider text-text-primary">
           ACTIFY
         </span>
       </div>
