@@ -118,9 +118,9 @@ export default function SettingsPage() {
         verifiedOnly,
         agentPaused,
       });
-      setNotice({ type: "success", message: "Agent policy updated." });
+      setNotice({ type: "success", message: "Connection policy updated." });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to update agent settings.";
+      const message = error instanceof Error ? error.message : "Failed to update connection settings.";
       setNotice({ type: "error", message });
     } finally {
       setSavingSettings(false);
@@ -161,9 +161,7 @@ export default function SettingsPage() {
       <div className="mx-auto max-w-5xl space-y-6">
         <div>
           <h2 className="font-display text-3xl font-bold text-text-primary">Settings</h2>
-          <p className="mt-2 text-sm text-text-muted">
-            Wallet configuration, marketplace integrations, and AI agent policy.
-          </p>
+            Wallet configuration, marketplace integrations, and connection policy.
         </div>
 
         {notice ? (
@@ -182,10 +180,10 @@ export default function SettingsPage() {
           <div className="space-y-6">
             <section className="rounded-2xl border border-line-panel bg-bg-panel/60 p-5 space-y-5">
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-text-muted">AI Agent Configuration</div>
-                <h3 className="mt-2 font-display text-2xl text-text-primary">WhatsApp Agent Policy</h3>
+                <div className="text-[10px] uppercase tracking-wider text-text-muted">WhatsApp Configuration</div>
+                <h3 className="mt-2 font-display text-2xl text-text-primary">WhatsApp Connection Policy</h3>
                 <p className="mt-2 text-sm text-text-secondary">
-                  These controls define what the WhatsApp agent is allowed to do on your behalf.
+                  These controls define what your connected WhatsApp account is allowed to do on your behalf.
                 </p>
               </div>
 
@@ -212,8 +210,8 @@ export default function SettingsPage() {
                   onChange={setVerifiedOnly}
                 />
                 <ToggleCard
-                  label="Pause Agent"
-                  description="Stop the WhatsApp agent from acting until resumed."
+                  label="Pause Connection"
+                  description="Stop your connected WhatsApp from acting until resumed."
                   enabled={agentPaused}
                   onChange={setAgentPaused}
                 />
@@ -236,7 +234,7 @@ export default function SettingsPage() {
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-line-panel/50 bg-bg-deep/40 p-4">
                 <div>
-                  <div className="text-sm font-semibold text-text-primary">Save Agent Policy</div>
+                  <div className="text-sm font-semibold text-text-primary">Save Connection Policy</div>
                   <div className="mt-1 text-xs text-text-muted">
                     Policy changes apply immediately to new WhatsApp instructions.
                   </div>
@@ -283,7 +281,7 @@ export default function SettingsPage() {
                     </button>
                   </div>
                   <div className="text-xs text-text-secondary">
-                    This number can now send shopping instructions to the Actify bot.
+                    This number can now send shopping instructions to Actify.
                   </div>
                 </div>
               ) : (
@@ -322,7 +320,7 @@ export default function SettingsPage() {
 
             <section className="rounded-2xl border border-line-panel bg-bg-panel/60 p-5 space-y-4">
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-text-muted">Recent Agent Intents</div>
+                <div className="text-[10px] uppercase tracking-wider text-text-muted">Recent Activity</div>
                 <h3 className="mt-2 font-display text-2xl text-text-primary">Latest WhatsApp Decisions</h3>
               </div>
               <div className="space-y-3">
@@ -399,7 +397,7 @@ export default function SettingsPage() {
             <section className="rounded-2xl border border-line-panel bg-bg-panel/60 p-5 space-y-4">
               <div className="text-[10px] uppercase tracking-wider text-text-muted">Marketplace Integrations</div>
               <p className="text-sm text-text-secondary">
-                Connect your eBay account so the AI agent can browse live listings.
+                Connect your eBay account so your WhatsApp connection can browse live listings.
               </p>
               {ebayConn ? (
                 <div className="space-y-4">

@@ -93,7 +93,7 @@ export function LeftRail() {
           </svg>
         </div>
         <span className="font-display text-sm font-semibold tracking-wider text-text-primary">
-          ACTIFY<span className="text-accent-cyan">.AI</span>
+          ACTIFY
         </span>
       </div>
 
@@ -204,7 +204,7 @@ export function LeftRail() {
           <div className="w-2 h-2 rounded-full bg-accent-lime animate-pulse" />
           <span className="text-xs text-text-secondary">
             {activeMission
-              ? `Agent ${activeMission.status.replace("_", " ")}`
+              ? `Connection ${activeMission.status.replace("_", " ")}`
               : ebayConn ? "eBay Mall live" : "eBay Mall ready"}
           </span>
         </div>
@@ -226,7 +226,7 @@ export function LeftRail() {
               {user?.name ?? "User"}
             </div>
             <div className="text-[10px] text-text-muted truncate">
-              {user?.email ?? "user@actify.ai"}
+              {user?.email ?? "user@actify.com"}
             </div>
           </div>
           <a

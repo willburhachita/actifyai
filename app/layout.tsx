@@ -3,10 +3,10 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Actify AI — Secure Agent Commerce",
+  title: "Actify — Secure Commerce",
   description:
-    "Authorize your AI agent. Watch it act within clear permission boundaries. A game-like agent commerce platform powered by Auth0 delegated authorization.",
-  keywords: ["AI agent", "delegated authorization", "Auth0", "agent commerce", "secure AI"],
+    "Authorize your WhatsApp connection. Watch it act within clear permission boundaries. A gamified commerce platform powered by Auth0 delegated authorization.",
+  keywords: ["Auth0", "delegated authorization", "secure commerce", "WhatsApp commerce"],
 };
 
 export default function RootLayout({
