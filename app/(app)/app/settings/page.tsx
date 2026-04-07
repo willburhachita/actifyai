@@ -176,8 +176,8 @@ export default function SettingsPage() {
           </div>
         ) : null}
 
-        <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-6">
+        <div className="flex flex-wrap items-start gap-6">
+          <div className="flex-1 min-w-[300px] space-y-6">
             <section className="rounded-2xl border border-line-panel bg-bg-panel/60 p-5 space-y-5">
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-text-muted">WhatsApp Configuration</div>
@@ -187,7 +187,7 @@ export default function SettingsPage() {
                 </p>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
                 <NumberField
                   label="Max Budget (ACT)"
                   value={maxBudget}
@@ -202,7 +202,7 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
                 <ToggleCard
                   label="Verified Sellers Only"
                   description="Only allow the agent to work with trusted sellers."
@@ -217,7 +217,7 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
                 <SelectionCard
                   title="Allowed Actions"
                   options={ACTION_OPTIONS}
@@ -356,12 +356,12 @@ export default function SettingsPage() {
             </section>
           </div>
 
-          <div className="space-y-6">
+          <div className="flex-1 min-w-[300px] space-y-6">
             <section className="rounded-2xl border border-line-panel bg-bg-panel/60 p-5 space-y-4">
               <div className="text-[10px] uppercase tracking-wider text-text-muted">Wallet</div>
               {wallet.isConnected && dbWallet ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 xl:gap-4">
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-3">
                     <MetricCard label="Balance" value={`${dbWallet.tokenBalance} ACT`} />
                     <MetricCard label="Chain" value={wallet.isCorrectChain ? "Sepolia" : "Wrong"} />
                     <MetricCard label="Faucet" value={dbWallet.hasClaimed ? "Claimed" : "Available"} />
@@ -406,7 +406,7 @@ export default function SettingsPage() {
               </p>
               {ebayConn ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xl:gap-4">
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
                     <MetricCard label="eBay Username" value={ebayConn.ebayUsername || "Connected"} />
                     <MetricCard label="Status" value={ebayConn.isExpired ? "Token Expired" : "Active"} />
                   </div>
@@ -464,7 +464,7 @@ function NumberField({
   hint: string;
 }) {
   return (
-    <label className="rounded-2xl border border-line-panel/50 bg-bg-deep/40 p-4 block">
+    <label className="flex-1 rounded-2xl border border-line-panel/50 bg-bg-deep/40 p-4 block">
       <div className="text-[10px] uppercase tracking-wider text-text-muted truncate">{label}</div>
       <input
         type="number"
@@ -500,10 +500,10 @@ function ToggleCard({
           : "border-line-panel/50 bg-bg-deep/40"
       }`}
     >
-      <div className="flex items-start sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1 pr-2">
           <div className="text-sm font-semibold text-text-primary truncate">{label}</div>
-          <div className="mt-1 text-xs text-text-muted line-clamp-2 md:line-clamp-none">{description}</div>
+          <div className="mt-1 text-xs text-text-muted">{description}</div>
         </div>
         <div
           className={`shrink-0 h-6 w-11 rounded-full p-1 transition ${
