@@ -12,21 +12,11 @@ import { EBAY_CATEGORIES } from "@/lib/ebay/client";
 const navItems = [
   {
     label: "World",
-    href: "/app/world",
+    href: "/app",
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <path d="M9 1l7 4v8l-7 4-7-4V5l7-4z" stroke="currentColor" strokeWidth="1.3" />
         <circle cx="9" cy="9" r="2" stroke="currentColor" strokeWidth="1" />
-      </svg>
-    ),
-  },
-  {
-    label: "Missions",
-    href: "/app",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <rect x="2" y="3" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" />
-        <path d="M6 7h6M6 10h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
       </svg>
     ),
   },
