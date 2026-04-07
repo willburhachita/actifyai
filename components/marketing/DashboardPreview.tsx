@@ -30,13 +30,20 @@ export function DashboardPreview() {
             <div className="grid grid-cols-[200px_1fr_220px] min-h-[320px]">
               {/* Left pane */}
               <div className="border-r border-line-panel p-4 space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 rounded bg-accent-cyan/20 border border-accent-cyan/30" />
-                  <span className="text-xs font-display font-semibold text-text-primary">
+                <div className="flex items-center gap-3 border-b border-line-panel/50 pb-4 mb-4">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-bg-deep to-bg-panel flex items-center justify-center border border-accent-cyan/20 shadow-[0_0_15px_rgba(5,231,255,0.15)] overflow-hidden">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2L3 20h3l4-8h4l4 8h3L12 2z" fill="#05e7ff" />
+                      <path d="M12 11l-1.5 3h3L12 11z" fill="#0a0a0a" />
+                      <line x1="12" y1="2" x2="12" y2="6" stroke="#05e7ff" strokeWidth="2" />
+                      <circle cx="12" cy="18" r="1.5" fill="#05e7ff" className="animate-pulse" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-display font-semibold tracking-wider text-text-primary">
                     ACTIFY
                   </span>
                 </div>
-                {["World", "Missions", "Approvals", "Activity", "Settings"].map(
+                {["World", "Orders", "Activity", "Wallet", "Settings"].map(
                   (item, i) => (
                     <div
                       key={item}

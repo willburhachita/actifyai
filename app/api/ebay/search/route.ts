@@ -65,8 +65,8 @@ export async function GET(req: NextRequest) {
       const result = await searchEbayItems({ q, categoryIds, limit, offset: 0 });
       return NextResponse.json(result);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "eBay search failed";
-      return NextResponse.json({ error: message }, { status: 502 });
+      console.warn("Real eBay search failed, falling back to mock data. Error:", err);
+      // Fall through to mock logic below
     }
   }
 

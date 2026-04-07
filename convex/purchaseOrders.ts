@@ -4,14 +4,18 @@ import { v } from "convex/values";
 export const createOrder = mutation({
   args: {
     auth0Id: v.string(),
-    productId: v.id("products"),
-    shopId: v.id("shops"),
+    productId: v.optional(v.id("products")),
+    shopId: v.optional(v.id("shops")),
     tokenAmount: v.number(),
     walletAddress: v.string(),
     productTitle: v.string(),
     shopLabel: v.string(),
     productImage: v.optional(v.string()),
     escrowTxHash: v.optional(v.string()),
+    ebayItemId: v.optional(v.string()),
+    ebayListingUrl: v.optional(v.string()),
+    ebayCheckoutUrl: v.optional(v.string()),
+    escrowComId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db

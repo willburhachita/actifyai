@@ -22,20 +22,17 @@ export function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-lg bg-accent-cyan/10 border border-accent-cyan/40 flex items-center justify-center group-hover:bg-accent-cyan/20 transition-colors">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M8 1L14 5V11L8 15L2 11V5L8 1Z"
-                stroke="#05e7ff"
-                strokeWidth="1.5"
-                fill="none"
-              />
-              <circle cx="8" cy="8" r="2" fill="#05e7ff" />
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-bg-deep to-bg-panel flex items-center justify-center border border-accent-cyan/20 shadow-[0_0_15px_rgba(5,231,255,0.15)] overflow-hidden transition-all group-hover:shadow-[0_0_20px_rgba(5,231,255,0.3)] group-hover:scale-105">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L3 20h3l4-8h4l4 8h3L12 2z" fill="#05e7ff" />
+              <path d="M12 11l-1.5 3h3L12 11z" fill="#0a0a0a" />
+              <line x1="12" y1="2" x2="12" y2="6" stroke="#05e7ff" strokeWidth="2" />
+              <circle cx="12" cy="18" r="1.5" fill="#05e7ff" className="animate-pulse" />
             </svg>
           </div>
           <span className="font-display text-xl font-semibold tracking-wider text-text-primary">
-            ACTIFY<span className="text-accent-cyan">.AI</span>
+            ACTIFY
           </span>
         </Link>
 
