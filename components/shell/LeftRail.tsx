@@ -76,13 +76,13 @@ export function LeftRail() {
     <aside className="h-full bg-bg-panel-strong border-r border-line-panel flex flex-col">
       {/* Logo */}
       <div className="px-5 h-16 flex items-center gap-2 border-b border-line-panel/50">
-        <div className="w-7 h-7 rounded-lg bg-accent-cyan/10 border border-accent-cyan/30 flex items-center justify-center">
+        <div className="w-7 h-7 rounded-lg bg-accent-cyan/10 border border-accent-cyan/30 flex items-center justify-center animate-pulse-glow hover:rotate-180 transition-transform duration-700 ease-in-out cursor-pointer">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path d="M8 1L14 5V11L8 15L2 11V5L8 1Z" stroke="#05e7ff" strokeWidth="1.5" fill="none" />
             <circle cx="8" cy="8" r="2" fill="#05e7ff" />
           </svg>
         </div>
-        <span className="font-display text-sm font-semibold tracking-wider text-text-primary">
+        <span className="font-display text-sm font-semibold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-text-primary to-accent-cyan">
           ACTIFY
         </span>
       </div>
