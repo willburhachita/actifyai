@@ -22,7 +22,7 @@ const CATEGORY_OPTIONS = [
   { value: "collectibles", label: "Collectibles" },
 ];
 
-const DEFAULT_TWILIO_NUMBER =
+const DEFAULT_WHATSAPP_NUMBER =
   process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER ?? "whatsapp:+14155238886";
 
 export default function SettingsPage() {
@@ -85,7 +85,7 @@ export default function SettingsPage() {
 
   const whatsAppInstructions = useMemo(() => {
     if (!pendingCode) return null;
-    return `Send "${pendingCode}" to ${DEFAULT_TWILIO_NUMBER}`;
+    return `Send "${pendingCode}" to ${DEFAULT_WHATSAPP_NUMBER}`;
   }, [pendingCode]);
 
   const handleConnectEbay = () => {
@@ -252,15 +252,20 @@ export default function SettingsPage() {
             <section className="rounded-2xl border border-line-panel bg-bg-panel/60 p-5 space-y-5">
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-text-muted">WhatsApp Linking</div>
-                <h3 className="mt-2 font-display text-2xl text-text-primary">Connect Twilio WhatsApp</h3>
+                <h3 className="mt-2 flex items-center gap-2 font-display text-2xl text-text-primary">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" className="text-[#25D366]">
+                    <path d="M12.031 0C5.385 0 0 5.384 0 12.031c0 2.12.553 4.185 1.602 6L.005 23.995l6.104-1.6c1.785.968 3.791 1.478 5.922 1.478 6.646 0 12.03-5.384 12.03-12.031C24.062 5.385 18.677 0 12.031 0zm7.135 17.1c-.292.825-1.688 1.579-2.33 1.666-.638.087-1.474.249-4.82-1.137-3.992-1.655-6.529-5.714-6.721-5.968-.192-.254-1.602-2.128-1.602-4.053s1.002-2.868 1.343-3.23c.343-.364.743-.456.993-.456.25 0 .5.006.722.016.232.011.542-.09.825.592.293.708.995 2.428 1.082 2.603.088.175.148.379.034.61-.113.231-.173.376-.345.578-.173.203-.365.433-.521.578-.175.163-.357.34-.15.696.206.355.918 1.516 1.97 2.454 1.357 1.207 2.493 1.577 2.848 1.751.353.175.56.146.772-.095.21-.24.912-1.066 1.156-1.428.244-.363.488-.302.812-.18.324.122 2.051.967 2.404 1.142.353.175.589.261.674.407.087.146.087.844-.205 1.668z"/>
+                  </svg>
+                  Connect WhatsApp
+                </h3>
                 <p className="mt-2 text-sm text-text-secondary">
                   Link your WhatsApp number to this logged-in Actify account using a one-time verification code.
                 </p>
               </div>
 
               <div className="rounded-2xl border border-line-panel/50 bg-bg-deep/40 p-4 space-y-3">
-                <div className="text-xs uppercase tracking-[0.24em] text-text-muted">Twilio Number</div>
-                <div className="font-mono text-sm text-accent-cyan">{DEFAULT_TWILIO_NUMBER}</div>
+                <div className="text-xs uppercase tracking-[0.24em] text-text-muted">WhatsApp Number</div>
+                <div className="font-mono text-sm text-[#25D366]">{DEFAULT_WHATSAPP_NUMBER}</div>
                 <div className="text-xs text-text-muted">
                   Use this exact WhatsApp destination when sending your verification code.
                 </div>

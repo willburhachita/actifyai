@@ -193,7 +193,7 @@ export function LeftRail() {
             disabled={wallet.isConnecting}
             className="w-full rounded-xl bg-gradient-to-r from-accent-amber to-[#ff8a00] px-3 py-2.5 text-xs font-semibold text-bg-deep transition hover:shadow-[0_0_18px_rgba(255,191,95,0.3)] disabled:opacity-50"
           >
-            {wallet.isConnecting ? "Connecting..." : "🦊 Connect MetaMask"}
+            {wallet.isConnecting ? "Connecting..." : "Connect MetaMask"}
           </button>
         )}
       </div>
