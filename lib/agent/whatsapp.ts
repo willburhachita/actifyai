@@ -13,12 +13,18 @@ type ParsedIntent = {
 };
 
 type Offer = {
+  itemId?: string;
   title: string;
   priceAct: number;
   url?: string;
+  imageUrl?: string;
   source: "ebay" | "demo";
   category: string;
   seller?: string;
+};
+
+type OfferContext = {
+  offers: Offer[];
 };
 
 export type WhatsAppAgentContext = {
@@ -46,7 +52,11 @@ export type WhatsAppAgentResolution = {
     resultSummary: string;
     targetTitle?: string;
     targetUrl?: string;
-    metadata?: Record<string, string | number | boolean>;
+    metadata?: Record<string, unknown>;
+  };
+  execution?: {
+    type: "create_order";
+    offer: Offer;
   };
 };
 
@@ -147,6 +157,21 @@ function fallbackParse(message: string): ParsedIntent {
   };
 }
 
+function parseOfferReference(message: string): number | null {
+  const lower = message.toLowerCase();
+  const numericMatch = lower.match(/\b(?:buy|purchase|order)\s+(?:option\s+)?([1-3])\b/);
+  if (numericMatch) {
+    return Number(numericMatch[1]) - 1;
+  }
+
+  if (/\b(first|1st)\b/.test(lower)) return 0;
+  if (/\b(second|2nd)\b/.test(lower)) return 1;
+  if (/\b(third|3rd)\b/.test(lower)) return 2;
+  if (/\b(buy it|buy that|get it|purchase it|order it)\b/.test(lower)) return 0;
+
+  return null;
+}
+
 async function parseIntentWithGemini(message: string): Promise<ParsedIntent | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -245,9 +270,11 @@ async function searchOffers(args: {
       }
 
       results.push({
+        itemId: item.itemId,
         title: item.title,
         priceAct,
         url: item.itemWebUrl,
+        imageUrl: item.image?.imageUrl ?? item.thumbnailImages?.[0]?.imageUrl,
         source: "ebay",
         category: args.category ?? "all",
         seller: item.seller?.username,
@@ -267,6 +294,7 @@ async function searchOffers(args: {
             title: product.title,
             priceAct: product.price,
             url: product.checkoutUrl,
+            imageUrl: product.image,
             source: "demo",
             category: shop.slug,
             seller: product.vendor,
@@ -310,8 +338,9 @@ function buildStatusReply(context: WhatsAppAgentContext) {
 export async function handleWhatsAppInstruction(args: {
   message: string;
   context: WhatsAppAgentContext;
+  recentOfferContext?: OfferContext | null;
 }): Promise<WhatsAppAgentResolution> {
-  const { message, context } = args;
+  const { message, context, recentOfferContext } = args;
 
   if (context.agentPaused) {
     return {
@@ -401,15 +430,20 @@ export async function handleWhatsAppInstruction(args: {
     context.walletBalance,
   );
 
-  const offers = await searchOffers({
-    query: parsed.query,
-    category: parsed.category,
-    budgetAct: effectiveBudget,
-  });
+  const referencedOfferIndex = parseOfferReference(message);
+  let offers =
+    parsed.intent === "buy" && referencedOfferIndex !== null && recentOfferContext?.offers?.length
+      ? recentOfferContext.offers
+      : await searchOffers({
+          query: parsed.query,
+          category: parsed.category,
+          budgetAct: effectiveBudget,
+        });
 
   if (parsed.intent === "browse") {
+    const topOffers = offers.slice(0, 3);
     return {
-      reply: formatOffersReply(`Here are a few options under ${effectiveBudget.toFixed(2)} ACT.`, offers),
+      reply: `${formatOffersReply(`Here are a few options under ${effectiveBudget.toFixed(2)} ACT.`, topOffers)}\n\nReply with "buy 1", "buy 2", or a product request like "buy headphones under 40 ACT" if you want me to proceed.`,
       intent: {
         status: "completed",
         actionType: "browse",
@@ -418,14 +452,26 @@ export async function handleWhatsAppInstruction(args: {
         resultSummary: `Shared ${Math.min(offers.length, 3)} browse results with the user.`,
         metadata: {
           resultCount: offers.length,
+          topOfferPriceAct: topOffers[0]?.priceAct ?? 0,
+          offers: topOffers.map((offer) => ({
+            itemId: offer.itemId ?? "",
+            title: offer.title,
+            priceAct: offer.priceAct,
+            url: offer.url ?? "",
+            imageUrl: offer.imageUrl ?? "",
+            source: offer.source,
+            category: offer.category,
+            seller: offer.seller ?? "",
+          })),
         },
       },
     };
   }
 
   if (parsed.intent === "compare") {
+    const topOffers = offers.slice(0, 3);
     return {
-      reply: formatOffersReply(`Best available deals under ${effectiveBudget.toFixed(2)} ACT.`, offers),
+      reply: `${formatOffersReply(`Best available deals under ${effectiveBudget.toFixed(2)} ACT.`, topOffers)}\n\nIf you'd like one of these, reply with "buy 1", "buy 2", or "buy 3".`,
       intent: {
         status: "completed",
         actionType: "compare",
@@ -434,12 +480,26 @@ export async function handleWhatsAppInstruction(args: {
         resultSummary: `Shared comparison results under ${effectiveBudget.toFixed(2)} ACT.`,
         metadata: {
           resultCount: offers.length,
+          topOfferPriceAct: topOffers[0]?.priceAct ?? 0,
+          offers: topOffers.map((offer) => ({
+            itemId: offer.itemId ?? "",
+            title: offer.title,
+            priceAct: offer.priceAct,
+            url: offer.url ?? "",
+            imageUrl: offer.imageUrl ?? "",
+            source: offer.source,
+            category: offer.category,
+            seller: offer.seller ?? "",
+          })),
         },
       },
     };
   }
 
-  const selected = offers[0];
+  const selected =
+    referencedOfferIndex !== null && offers[referencedOfferIndex]
+      ? offers[referencedOfferIndex]
+      : offers[0];
   if (!selected) {
     return {
       reply:
@@ -486,6 +546,9 @@ export async function handleWhatsAppInstruction(args: {
     };
   }
 
+  const canExecutePurchase = context.allowedActions.includes("execute_purchase");
+  const canDraftPurchase = context.allowedActions.includes("draft_purchase");
+
   if (selected.priceAct > context.approvalThreshold) {
     return {
       reply: `I found ${selected.title} at ${selected.priceAct.toFixed(2)} ACT. That is within your budget but above your approval threshold of ${context.approvalThreshold.toFixed(2)} ACT, so I created a pending approval instead of proceeding.`,
@@ -505,20 +568,60 @@ export async function handleWhatsAppInstruction(args: {
     };
   }
 
+  if (!canExecutePurchase && canDraftPurchase) {
+    return {
+      reply: `I prepared a purchase draft for ${selected.title} at ${selected.priceAct.toFixed(2)} ACT. Your policy allows drafts, but not autonomous checkout execution from WhatsApp.`,
+      intent: {
+        status: "draft_ready",
+        actionType: "draft_purchase",
+        category: parsed.category ?? undefined,
+        proposedAmountAct: selected.priceAct,
+        requiresApproval: false,
+        resultSummary: "Created a WhatsApp purchase draft that is within the user's allowed budget.",
+        targetTitle: selected.title,
+        targetUrl: selected.url,
+        metadata: {
+          source: selected.source,
+        },
+      },
+    };
+  }
+
+  if (!canExecutePurchase) {
+    return {
+      reply:
+        "Your current policy does not allow autonomous purchases from WhatsApp. Enable execute_purchase or draft_purchase in the dashboard first.",
+      intent: {
+        status: "blocked",
+        actionType: "execute_purchase",
+        category: parsed.category ?? undefined,
+        proposedAmountAct: selected.priceAct,
+        requiresApproval: false,
+        resultSummary: "Blocked because WhatsApp execution is not allowed by policy.",
+        targetTitle: selected.title,
+        targetUrl: selected.url,
+      },
+    };
+  }
+
   return {
-    reply: `I prepared a purchase draft for ${selected.title} at ${selected.priceAct.toFixed(2)} ACT. It is within your approved limit, but I am keeping WhatsApp execution in draft mode for safety until the final execution hook is enabled.`,
+    reply: `I found ${selected.title} at ${selected.priceAct.toFixed(2)} ACT and it is within your approved WhatsApp limit. I'm creating the order now.`,
     intent: {
-      status: "draft_ready",
-      actionType: "draft_purchase",
+      status: "ready_to_execute",
+      actionType: "execute_purchase",
       category: parsed.category ?? undefined,
       proposedAmountAct: selected.priceAct,
       requiresApproval: false,
-      resultSummary: "Created a WhatsApp purchase draft that is within the user's allowed budget.",
+      resultSummary: "Prepared an auto-approved WhatsApp purchase for execution.",
       targetTitle: selected.title,
       targetUrl: selected.url,
       metadata: {
         source: selected.source,
       },
+    },
+    execution: {
+      type: "create_order",
+      offer: selected,
     },
   };
 }

@@ -3,10 +3,21 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Actify — Secure Commerce",
+  title: "Actify - Secure Commerce",
   description:
-    "Authorize your WhatsApp connection. Watch it act within clear permission boundaries. A gamified commerce platform powered by Auth0 delegated authorization.",
-  keywords: ["Auth0", "delegated authorization", "secure commerce", "WhatsApp commerce"],
+    "Browse the eBay Mall, fund purchases with ACT, lock value in escrow, and govern what your WhatsApp agent is allowed to do.",
+  keywords: [
+    "Actify",
+    "eBay Mall",
+    "ACT token",
+    "escrow commerce",
+    "WhatsApp agent",
+  ],
+  icons: {
+    icon: "/logo.svg",
+    shortcut: "/logo.svg",
+    apple: "/logo.svg",
+  },
 };
 
 export default function RootLayout({
@@ -29,9 +40,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-bg-deep text-text-primary antialiased">
-        <Providers>
-          {children}
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

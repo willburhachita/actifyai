@@ -693,10 +693,8 @@
                 document.getElementById('char-select-screen').classList.remove('show');
                 buildPlayerModel(CHARACTERS[selectedCharIndex]);
                 playOpen();
-                // Skip click-to-start — jump straight into the game
-                // Request pointer lock immediately (works in most browsers from a user click)
-                try { renderer.domElement.requestPointerLock(); } catch(e) {}
                 ensureAudio();
+                clickStart.classList.add('show');
             });
         }
 
@@ -1755,9 +1753,7 @@
             panelEl.classList.remove('open');
             document.getElementById('escrow-panel').classList.remove('active');
             playClose();
-            setTimeout(() => {
-                try { renderer.domElement.requestPointerLock(); } catch(e) {}
-            }, 200);
+            clickStart.classList.add('show');
         };
 
         window.initEscrow = function(name, price) {
@@ -1913,9 +1909,8 @@
                     if (savedIdx >= 0 && savedIdx < CHARACTERS.length) {
                         selectedCharIndex = savedIdx;
                         buildPlayerModel(CHARACTERS[savedIdx]);
-                        // Skip character select & click-to-start — go straight in
                         ensureAudio();
-                        try { renderer.domElement.requestPointerLock(); } catch(e) {}
+                        clickStart.classList.add('show');
                     } else {
                         // First visit — show character select
                         document.getElementById('char-select-screen').classList.add('show');

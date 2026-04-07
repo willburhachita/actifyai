@@ -19,8 +19,15 @@ import {
   SEPOLIA_CHAIN_ID,
   SEPOLIA_CHAIN,
   orderIdToBytes32,
+  fromTokenUnits,
   toTokenUnits,
 } from "./contracts";
+
+export type PurchaseExecutionResult = {
+  receiptId: string;
+  mode: "onchain" | "mock";
+  note?: string;
+};
 
 type WalletState = {
   isConnected: boolean;
@@ -50,7 +57,7 @@ type WalletActions = {
     productImage?: string;
     ebayItemId?: string;
     ebayListingUrl?: string;
-  }) => Promise<string | null>;
+  }) => Promise<PurchaseExecutionResult | null>;
   confirmDelivery: (orderId: string) => Promise<string | null>;
   requestRefund: (orderId: string) => Promise<string | null>;
   switchToSepolia: () => Promise<void>;
@@ -66,6 +73,28 @@ function getEthereum(): any {
     return (window as any).ethereum;
   }
   return null;
+}
+
+function isUserRejectedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  const code = typeof error === "object" && error !== null && "code" in error ? (error as { code?: number }).code : undefined;
+  return code === 4001 || message.includes("user rejected") || message.includes("rejected action");
+}
+
+function shouldUseDemoEscrowFallback(error: unknown): boolean {
+  if (isUserRejectedError(error)) return false;
+
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return [
+    "insufficient allowance",
+    "insufficient funds",
+    "call_exception",
+    "estimategas",
+    "missing revert data",
+    "execution reverted",
+    "escrow token mismatch",
+    "network does not support ens",
+  ].some((needle) => message.includes(needle));
 }
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
@@ -131,6 +160,47 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const hasTokenContract = !!effectiveTokenAddress;
   const hasEscrowContract = !!effectiveEscrowAddress;
 
+  const syncOnchainWalletState = useCallback(async () => {
+    if (!auth0Id || !address || !effectiveTokenAddress) return;
+
+    const ethereum = getEthereum();
+    if (!ethereum) return;
+
+    try {
+      const { BrowserProvider, Contract } = await import("ethers");
+      const provider = new BrowserProvider(ethereum);
+      const token = new Contract(effectiveTokenAddress, TOKEN_ABI, provider);
+
+      const [rawBalance, claimed] = await Promise.all([
+        token.balanceOf(address) as Promise<bigint>,
+        token.hasClaimed(address) as Promise<boolean>,
+      ]);
+
+      const actualBalance = fromTokenUnits(rawBalance);
+      if (Math.abs(actualBalance - tokenBalance) > 0.000001) {
+        await updateBalanceMutation({ auth0Id, newBalance: actualBalance });
+      }
+
+      if (claimed && !hasClaimed) {
+        await markClaimedMutation({ auth0Id });
+      }
+    } catch (err) {
+      console.warn("[wallet] Failed to sync on-chain state", err);
+    }
+  }, [
+    address,
+    auth0Id,
+    effectiveTokenAddress,
+    hasClaimed,
+    markClaimedMutation,
+    tokenBalance,
+    updateBalanceMutation,
+  ]);
+
+  useEffect(() => {
+    void syncOnchainWalletState();
+  }, [syncOnchainWalletState]);
+
   const switchToSepolia = useCallback(async () => {
     const ethereum = getEthereum();
     if (!ethereum) return;
@@ -176,17 +246,19 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         await switchToSepolia();
       }
 
-      // Save to Convex (creates wallet with 100 token balance if new)
+      // Save wallet connection to Convex, then sync the real on-chain ACT state.
       await connectWalletMutation({
         auth0Id,
         address: walletAddress,
       });
+
+      await syncOnchainWalletState();
     } catch (err: any) {
       setError(err.message ?? "Failed to connect wallet");
     } finally {
       setIsConnecting(false);
     }
-  }, [auth0Id, connectWalletMutation, switchToSepolia]);
+  }, [auth0Id, connectWalletMutation, switchToSepolia, syncOnchainWalletState]);
 
   const deployToken = useCallback(async () => {
     if (!address) {
@@ -267,41 +339,50 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       const tx = await token.claimFaucet();
       await tx.wait();
 
-      // Update database after successful on-chain tx
-      await updateBalanceMutation({ auth0Id, newBalance: tokenBalance + 100 });
       await markClaimedMutation({ auth0Id });
+      await syncOnchainWalletState();
     } catch (e: any) {
       setError(e.message || "Faucet claim failed");
     }
-  }, [address, auth0Id, effectiveTokenAddress, tokenBalance, updateBalanceMutation, markClaimedMutation]);
+  }, [address, auth0Id, effectiveTokenAddress, markClaimedMutation, syncOnchainWalletState]);
 
   const buyACTTokens = useCallback(async (ethAmount: number, actAmount: number) => {
     if (!auth0Id || !address) {
       setError("Connect wallet first");
       return;
     }
+    if (!effectiveTokenAddress) {
+      setError("Deploy the ACT token contract before buying ACT.");
+      return;
+    }
     const ethereum = getEthereum();
     if (!ethereum) return;
 
     try {
-      const { BrowserProvider, parseEther } = await import("ethers");
+      setError(null);
+      const { BrowserProvider, Contract } = await import("ethers");
       const provider = new BrowserProvider(ethereum);
       const signer = await provider.getSigner();
+      const token = new Contract(effectiveTokenAddress, TOKEN_ABI, signer);
 
-      // Real MetaMask transaction — send ETH to the treasury/contract
-      // This triggers a MetaMask confirmation popup
-      const tx = await signer.sendTransaction({
-        to: effectiveEscrowAddress || address, // Send to escrow contract or self if not deployed
-        value: parseEther(ethAmount.toString()),
-      });
+      // For the local demo flow, ACT is minted by the wallet that deployed the token contract.
+      // Sending ETH directly to the escrow contract fails because the escrow contract is not payable.
+      const owner = (await token.owner()) as string;
+      if (owner.toLowerCase() !== address.toLowerCase()) {
+        throw new Error(
+          "The connected wallet is not the ACT token owner. Switch to the wallet that deployed the ACT contract to mint demo ACT."
+        );
+      }
+
+      const tx = await token.mint(address, toTokenUnits(actAmount));
       await tx.wait();
 
-      // Update Convex balance after confirmed on-chain tx
       await buyTokensMutation({ auth0Id, amountACT: actAmount, amountETH: ethAmount });
+      await syncOnchainWalletState();
     } catch (e: any) {
       setError(e.message || "Token purchase failed");
     }
-  }, [auth0Id, address, effectiveEscrowAddress, buyTokensMutation]);
+  }, [auth0Id, address, effectiveTokenAddress, buyTokensMutation, syncOnchainWalletState]);
 
   const purchaseProduct = useCallback(
     async (args: {
@@ -318,7 +399,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       if (!ethereum) return null;
 
       try {
-        const { BrowserProvider, Contract } = await import("ethers");
+        const { BrowserProvider, Contract, MaxUint256, ZeroAddress } = await import("ethers");
         const provider = new BrowserProvider(ethereum);
         const signer = await provider.getSigner();
 
@@ -330,26 +411,58 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         const orderKey = args.orderId ?? args.ebayItemId ?? `ebay_${Date.now()}`;
         const orderBytes = orderIdToBytes32(orderKey);
 
-        // Step 1: Approve escrow to spend tokens
-        const approveTx = await token.approve(effectiveEscrowAddress, amount);
-        await approveTx.wait();
+        const escrowTokenAddress = "token" in escrow
+          ? (await escrow.token()) as string
+          : ZeroAddress;
+        if (
+          escrowTokenAddress !== ZeroAddress &&
+          escrowTokenAddress.toLowerCase() !== effectiveTokenAddress.toLowerCase()
+        ) {
+          throw new Error(
+            "Escrow token mismatch. Redeploy the escrow contract so it points to the current ACT token contract."
+          );
+        }
+
+        const allowanceBefore = (await token.allowance(address, effectiveEscrowAddress)) as bigint;
+        if (allowanceBefore < amount) {
+          const approveTx = await token.approve(effectiveEscrowAddress, MaxUint256);
+          await approveTx.wait();
+        }
+
+        const allowanceAfter = (await token.allowance(address, effectiveEscrowAddress)) as bigint;
+        if (allowanceAfter < amount) {
+          throw new Error("Insufficient allowance");
+        }
 
         // Step 2: Lock tokens in escrow
         const lockTx = await escrow.lockTokens(orderBytes, amount);
         const receipt = await lockTx.wait();
+        await syncOnchainWalletState();
 
-        return receipt.hash as string;
+        return {
+          receiptId: receipt.hash as string,
+          mode: "onchain",
+        } satisfies PurchaseExecutionResult;
       } catch (err: any) {
+        if (shouldUseDemoEscrowFallback(err)) {
+          console.warn("[wallet] Falling back to demo escrow", err);
+          return {
+            receiptId: `demo-escrow-${Date.now()}`,
+            mode: "mock",
+            note: "Sepolia execution was unavailable, so the purchase continued in demo escrow mode.",
+          } satisfies PurchaseExecutionResult;
+        }
+
         setError(err.message ?? "Purchase failed");
         return null;
       }
     },
-    [address]
+    [address, effectiveEscrowAddress, effectiveTokenAddress, syncOnchainWalletState]
   );
 
   const confirmDelivery = useCallback(
     async (orderId: string) => {
-      if (!address || !ESCROW_ADDRESS) return null;
+      if (!address || !effectiveEscrowAddress) return null;
       const ethereum = getEthereum();
       if (!ethereum) return null;
 
@@ -357,7 +470,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         const { BrowserProvider, Contract } = await import("ethers");
         const provider = new BrowserProvider(ethereum);
         const signer = await provider.getSigner();
-        const escrow = new Contract(ESCROW_ADDRESS, ESCROW_ABI, signer);
+        const escrow = new Contract(effectiveEscrowAddress, ESCROW_ABI, signer);
 
         const orderBytes = orderIdToBytes32(orderId);
         const tx = await escrow.releaseTokens(orderBytes);
@@ -369,12 +482,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
     },
-    [address]
+    [address, effectiveEscrowAddress]
   );
 
   const requestRefund = useCallback(
     async (orderId: string) => {
-      if (!address || !ESCROW_ADDRESS) return null;
+      if (!address || !effectiveEscrowAddress) return null;
       const ethereum = getEthereum();
       if (!ethereum) return null;
 
@@ -382,11 +495,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         const { BrowserProvider, Contract } = await import("ethers");
         const provider = new BrowserProvider(ethereum);
         const signer = await provider.getSigner();
-        const escrow = new Contract(ESCROW_ADDRESS, ESCROW_ABI, signer);
+        const escrow = new Contract(effectiveEscrowAddress, ESCROW_ABI, signer);
 
         const orderBytes = orderIdToBytes32(orderId);
         const tx = await escrow.refundTokens(orderBytes);
         const receipt = await tx.wait();
+        await syncOnchainWalletState();
 
         return receipt.hash as string;
       } catch (err: any) {
@@ -394,7 +508,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
     },
-    [address]
+    [address, effectiveEscrowAddress, syncOnchainWalletState]
   );
 
   const value = useMemo<WalletContextValue>(

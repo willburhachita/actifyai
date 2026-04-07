@@ -43,7 +43,7 @@ export const connectWallet = mutation({
     const walletId = await ctx.db.insert("wallets", {
       userId: user._id,
       address: args.address.toLowerCase(),
-      tokenBalance: 100,
+      tokenBalance: 0,
       hasClaimed: false,
       connectedAt: Date.now(),
     });
@@ -52,7 +52,7 @@ export const connectWallet = mutation({
       userId: user._id,
       type: "system",
       title: "Wallet connected",
-      detail: `MetaMask wallet ${args.address.slice(0, 6)}...${args.address.slice(-4)} connected. 100 ACT tokens credited.`,
+      detail: `MetaMask wallet ${args.address.slice(0, 6)}...${args.address.slice(-4)} connected. Claim your one-time 1,000 ACT starter faucet or mint demo ACT after deploying the token contract.`,
       createdAt: Date.now(),
     });
 

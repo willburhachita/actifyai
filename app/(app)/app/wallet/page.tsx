@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { useWallet } from "@/lib/web3/provider";
+import { FREE_STARTER_ACT, TOKEN_PROGRESS_MAX } from "@/lib/web3/contracts";
 
 export default function WalletPage() {
   const wallet = useWallet();
@@ -107,7 +108,7 @@ export default function WalletPage() {
                     onClick={wallet.claimFaucet}
                     className="w-full rounded-xl bg-accent-cyan/10 border border-accent-cyan/30 py-3 text-sm font-semibold text-accent-cyan transition hover:bg-accent-cyan/20 cursor-pointer"
                   >
-                    Claim On-chain ACT Tokens
+                    Claim {FREE_STARTER_ACT.toLocaleString()} On-chain ACT Tokens
                   </button>
                 )}
 
@@ -130,12 +131,12 @@ export default function WalletPage() {
                   <div className="h-2 bg-bg-deep rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-accent-cyan/80 to-accent-cyan rounded-full transition-all"
-                      style={{ width: `${Math.min((wallet.tokenBalance / 500) * 100, 100)}%` }}
+                      style={{ width: `${Math.min((wallet.tokenBalance / TOKEN_PROGRESS_MAX) * 100, 100)}%` }}
                     />
                   </div>
                   <div className="flex justify-between text-[10px] text-text-muted">
                     <span>0 ACT</span>
-                    <span>500 ACT</span>
+                    <span>{TOKEN_PROGRESS_MAX.toLocaleString()} ACT</span>
                   </div>
                 </div>
               </div>

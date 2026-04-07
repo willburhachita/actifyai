@@ -6,6 +6,7 @@ import { useUser } from "@auth0/nextjs-auth0/client";
 
 import { api } from "@/convex/_generated/api";
 import { useWallet } from "@/lib/web3/provider";
+import { FREE_STARTER_ACT } from "@/lib/web3/contracts";
 
 const ACTION_OPTIONS = [
   { value: "browse", label: "Browse catalog" },
@@ -379,7 +380,7 @@ export default function SettingsPage() {
                       }}
                       className="w-full rounded-xl bg-accent-cyan/10 border border-accent-cyan/30 px-4 py-3 text-sm font-semibold text-accent-cyan transition hover:bg-accent-cyan/20"
                     >
-                      Claim 100 On-chain ACT Tokens
+                      Claim {FREE_STARTER_ACT.toLocaleString()} On-chain ACT Tokens
                     </button>
                   ) : null}
                 </div>

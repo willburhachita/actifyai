@@ -104,23 +104,106 @@ export async function POST(request: NextRequest) {
   const resolution = await handleWhatsAppInstruction({
     message: normalizedBody,
     context: linkedUser,
+    recentOfferContext: await convex.query(api.whatsapp.getRecentOfferContext, {
+      userId: linkedUser.userId,
+    }),
   });
 
-  if (resolution.intent) {
+  let finalReply = resolution.reply;
+  let finalIntent = resolution.intent;
+
+  if (resolution.execution?.type === "create_order") {
+    const selectedOffer = resolution.execution.offer;
+
+    if (!linkedUser.walletAddress) {
+      finalReply =
+        "Your WhatsApp is linked, but there is no wallet connected to your Actify account yet. Connect MetaMask in the dashboard first, then I can buy on your behalf within policy.";
+      finalIntent = {
+        status: "blocked",
+        actionType: "execute_purchase",
+        category: selectedOffer.category,
+        proposedAmountAct: selectedOffer.priceAct,
+        requiresApproval: false,
+        resultSummary: "Blocked because the linked user has no connected wallet address.",
+        targetTitle: selectedOffer.title,
+        targetUrl: selectedOffer.url,
+        metadata: {
+          source: selectedOffer.source,
+        },
+      };
+    } else {
+      try {
+        const orderId = await convex.mutation(api.purchaseOrders.createOrder, {
+          auth0Id: linkedUser.auth0Id,
+          tokenAmount: selectedOffer.priceAct,
+          walletAddress: linkedUser.walletAddress,
+          productTitle: selectedOffer.title,
+          shopLabel: selectedOffer.source === "ebay" ? "eBay Mall" : "Actify Demo Catalog",
+          productImage: selectedOffer.imageUrl,
+          escrowTxHash: `whatsapp-ai-${Date.now()}`,
+          ebayItemId: selectedOffer.source === "ebay" ? selectedOffer.itemId : undefined,
+          ebayListingUrl: selectedOffer.url,
+          ebayCheckoutUrl: selectedOffer.url,
+        });
+
+        finalReply = [
+          `Done — I created an Actify order for ${selectedOffer.title} at ${selectedOffer.priceAct.toFixed(2)} ACT.`,
+          `It is now associated with your linked account and activity log.`,
+          selectedOffer.url ? `Checkout link: ${selectedOffer.url}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        finalIntent = {
+          status: "completed",
+          actionType: "execute_purchase",
+          category: selectedOffer.category,
+          proposedAmountAct: selectedOffer.priceAct,
+          requiresApproval: false,
+          resultSummary: `Created an order from WhatsApp for ${selectedOffer.title} at ${selectedOffer.priceAct.toFixed(2)} ACT.`,
+          targetTitle: selectedOffer.title,
+          targetUrl: selectedOffer.url,
+          metadata: {
+            source: selectedOffer.source,
+            orderId,
+            initiatedBy: "whatsapp_ai",
+          },
+        };
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : "Unable to create the purchase order right now.";
+        finalReply = `I found the item, but I couldn't complete the Actify purchase record yet: ${detail}`;
+        finalIntent = {
+          status: "blocked",
+          actionType: "execute_purchase",
+          category: selectedOffer.category,
+          proposedAmountAct: selectedOffer.priceAct,
+          requiresApproval: false,
+          resultSummary: `Execution failed while creating the WhatsApp purchase order: ${detail}`,
+          targetTitle: selectedOffer.title,
+          targetUrl: selectedOffer.url,
+          metadata: {
+            source: selectedOffer.source,
+          },
+        };
+      }
+    }
+  }
+
+  if (finalIntent) {
     await convex.mutation(api.whatsapp.createAgentIntent, {
       userId: linkedUser.userId,
       source: "whatsapp",
       sourceMessageId: messageSid,
       instruction: normalizedBody,
-      status: resolution.intent.status,
-      actionType: resolution.intent.actionType,
-      category: resolution.intent.category,
-      proposedAmountAct: resolution.intent.proposedAmountAct,
-      requiresApproval: resolution.intent.requiresApproval,
-      resultSummary: resolution.intent.resultSummary,
-      targetTitle: resolution.intent.targetTitle,
-      targetUrl: resolution.intent.targetUrl,
-      metadata: resolution.intent.metadata,
+      status: finalIntent.status,
+      actionType: finalIntent.actionType,
+      category: finalIntent.category,
+      proposedAmountAct: finalIntent.proposedAmountAct,
+      requiresApproval: finalIntent.requiresApproval,
+      resultSummary: finalIntent.resultSummary,
+      targetTitle: finalIntent.targetTitle,
+      targetUrl: finalIntent.targetUrl,
+      metadata: finalIntent.metadata,
     });
   }
 
@@ -128,12 +211,12 @@ export async function POST(request: NextRequest) {
     userId: linkedUser.userId,
     fromAddress: to,
     toAddress: from,
-    body: resolution.reply,
+    body: finalReply,
     status: "sent_via_twiml",
     metadata: {
       sourceMessageId: messageSid ?? "",
     },
   });
 
-  return xmlResponse(buildTwiMLMessage(resolution.reply));
+  return xmlResponse(buildTwiMLMessage(finalReply));
 }

@@ -7,16 +7,16 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /**
  * @title ActifyToken
  * @dev ERC-20 test token for the Actify AI marketplace.
- *      New users can claim 100 tokens once via the faucet.
+ *      New users can claim 1,000 tokens once via the faucet.
  *      Owner can also mint for testing purposes.
  */
 contract ActifyToken is ERC20, Ownable {
     mapping(address => bool) public hasClaimed;
-    uint256 public constant FAUCET_AMOUNT = 100 * 10 ** 18;
+    uint256 public constant FAUCET_AMOUNT = 1000 * 10 ** 18;
 
     constructor() ERC20("Actify Token", "ACT") Ownable(msg.sender) {}
 
-    /// @notice Claim 100 free test tokens (once per address)
+    /// @notice Claim 1,000 free test tokens (once per address)
     function claimFaucet() external {
         require(!hasClaimed[msg.sender], "Already claimed");
         hasClaimed[msg.sender] = true;

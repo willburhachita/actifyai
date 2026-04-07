@@ -6,6 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import { useWallet } from "@/lib/web3/provider";
+import { FREE_STARTER_ACT, TOKEN_PROGRESS_MAX } from "@/lib/web3/contracts";
 import { useWorldExperience } from "@/lib/stores/world-experience";
 import { EBAY_CATEGORIES } from "@/lib/ebay/client";
 
@@ -178,7 +179,7 @@ export function LeftRail() {
             <div className="h-1.5 bg-bg-deep rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-accent-cyan/80 to-accent-cyan rounded-full transition-all"
-                style={{ width: `${Math.min((wallet.tokenBalance / 100) * 100, 100)}%` }}
+                style={{ width: `${Math.min((wallet.tokenBalance / TOKEN_PROGRESS_MAX) * 100, 100)}%` }}
               />
             </div>
             {!wallet.hasClaimed && (
@@ -186,7 +187,7 @@ export function LeftRail() {
                 onClick={wallet.claimFaucet}
                 className="w-full rounded-lg bg-accent-lime/15 border border-accent-lime/25 px-2 py-1.5 text-[10px] font-semibold text-accent-lime transition hover:bg-accent-lime/25"
               >
-                Claim On-chain Tokens
+                Claim {FREE_STARTER_ACT.toLocaleString()} ACT
               </button>
             )}
           </div>

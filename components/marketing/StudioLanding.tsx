@@ -81,8 +81,7 @@ export function StudioLanding() {
         <div className="relative mx-auto grid max-w-7xl gap-14 px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-accent-cyan/25 bg-accent-cyan/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-accent-cyan">
-              <span className="h-2 w-2 rounded-full bg-accent-cyan animate-pulse" />
-              Game-like commerce dashboard
+                          
             </div>
 
             <div className="mt-8 flex items-center gap-4">

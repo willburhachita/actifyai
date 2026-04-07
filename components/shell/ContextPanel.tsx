@@ -6,6 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useWallet } from "@/lib/web3/provider";
 import { useEbaySearch, EBAY_CATEGORIES, type EbayItemSummary, type EbayItemDetail, type EbayCategory } from "@/lib/ebay/useEbaySearch";
+import { FREE_STARTER_ACT } from "@/lib/web3/contracts";
 import toast from "react-hot-toast";
 import { useActifyAnimation } from "@/components/providers/ActifyAnimationProvider";
 
@@ -98,7 +99,7 @@ export function ContextPanel({ ebayCategory = "electronics" }: ContextPanelProps
     setPurchasing(true);
     try {
       // Step 1: Lock tokens in Ethereum Escrow Contract (on-chain)
-      const escrowHash = await wallet.purchaseProduct({
+      const purchaseResult = await wallet.purchaseProduct({
         orderId: `ebay_${item.itemId}_${Date.now().toString().slice(-6)}`,
         productTitle: item.title,
         shopLabel: "eBay Mall",
@@ -108,9 +109,15 @@ export function ContextPanel({ ebayCategory = "electronics" }: ContextPanelProps
         ebayListingUrl: item.itemWebUrl,
       });
 
-      if (!escrowHash) throw new Error("On-chain escrow transaction was not completed. Ensure contracts are deployed and try again.");
+      if (!purchaseResult) {
+        throw new Error("Escrow transaction was not completed. Please try again.");
+      }
 
-      toast.success("Tokens locked on-chain!");
+      if (purchaseResult.mode === "onchain") {
+        toast.success("Tokens locked on-chain!");
+      } else {
+        toast.success(purchaseResult.note || "Demo escrow mode enabled for this purchase.");
+      }
 
       // Step 2: Create Escrow.com transaction (financial escrow)
       let escrowComId: string | undefined;
@@ -146,7 +153,7 @@ export function ContextPanel({ ebayCategory = "electronics" }: ContextPanelProps
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ebayItemId: item.itemId,
-            escrowHash,
+            escrowHash: purchaseResult.receiptId,
             amount: price,
           }),
         });
@@ -176,7 +183,7 @@ export function ContextPanel({ ebayCategory = "electronics" }: ContextPanelProps
         productTitle: item.title,
         shopLabel: "eBay Mall",
         productImage: item.image?.imageUrl,
-        escrowTxHash: escrowHash,
+        escrowTxHash: purchaseResult.receiptId,
         escrowComId,
       });
 
@@ -773,7 +780,7 @@ function WalletStrip({ wallet }: { wallet: ReturnType<typeof useWallet> }) {
               onClick={wallet.claimFaucet}
               className="rounded-lg bg-accent-lime/10 border border-accent-lime/25 px-2.5 py-1 text-[10px] font-semibold text-accent-lime hover:bg-accent-lime/20 transition"
             >
-              Claim 100 ACT
+              Claim {FREE_STARTER_ACT.toLocaleString()} ACT
             </button>
           )}
         </div>

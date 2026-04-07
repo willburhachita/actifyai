@@ -252,3 +252,29 @@ export const listRecentAgentIntents = query({
       .take(args.limit ?? 10);
   },
 });
+
+export const getRecentOfferContext = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const intents = await ctx.db
+      .query("agentIntents")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(10);
+
+    for (const intent of intents) {
+      const offers = intent.metadata?.offers;
+      if (Array.isArray(offers) && offers.length > 0) {
+        return {
+          offers,
+          sourceIntentId: intent._id,
+          createdAt: intent.createdAt,
+        };
+      }
+    }
+
+    return null;
+  },
+});
