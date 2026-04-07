@@ -178,7 +178,7 @@ export default function SettingsPage() {
           </div>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-6">
             <section className="rounded-2xl border border-line-panel bg-bg-panel/60 p-5 space-y-5">
               <div>
@@ -234,7 +234,7 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between gap-4 rounded-2xl border border-line-panel/50 bg-bg-deep/40 p-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-line-panel/50 bg-bg-deep/40 p-4">
                 <div>
                   <div className="text-sm font-semibold text-text-primary">Save Agent Policy</div>
                   <div className="mt-1 text-xs text-text-muted">
@@ -358,7 +358,7 @@ export default function SettingsPage() {
               <div className="text-[10px] uppercase tracking-wider text-text-muted">Wallet</div>
               {wallet.isConnected && dbWallet ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 xl:gap-4">
                     <MetricCard label="Balance" value={`${dbWallet.tokenBalance} ACT`} />
                     <MetricCard label="Chain" value={wallet.isCorrectChain ? "Sepolia" : "Wrong"} />
                     <MetricCard label="Faucet" value={dbWallet.hasClaimed ? "Claimed" : "Available"} />
@@ -403,11 +403,11 @@ export default function SettingsPage() {
               </p>
               {ebayConn ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xl:gap-4">
                     <MetricCard label="eBay Username" value={ebayConn.ebayUsername || "Connected"} />
                     <MetricCard label="Status" value={ebayConn.isExpired ? "Token Expired" : "Active"} />
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-3">
                     <button
                       onClick={() => disconnectEbay({ auth0Id })}
                       className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm font-semibold text-rose-500 transition hover:bg-rose-500/20"
@@ -462,7 +462,7 @@ function NumberField({
 }) {
   return (
     <label className="rounded-2xl border border-line-panel/50 bg-bg-deep/40 p-4 block">
-      <div className="text-[10px] uppercase tracking-wider text-text-muted">{label}</div>
+      <div className="text-[10px] uppercase tracking-wider text-text-muted truncate">{label}</div>
       <input
         type="number"
         min={0}
@@ -497,13 +497,13 @@ function ToggleCard({
           : "border-line-panel/50 bg-bg-deep/40"
       }`}
     >
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <div className="text-sm font-semibold text-text-primary">{label}</div>
-          <div className="mt-1 text-xs text-text-muted">{description}</div>
+      <div className="flex items-start sm:items-center justify-between gap-4">
+        <div className="min-w-0 flex-1 pr-2">
+          <div className="text-sm font-semibold text-text-primary truncate">{label}</div>
+          <div className="mt-1 text-xs text-text-muted line-clamp-2 md:line-clamp-none">{description}</div>
         </div>
         <div
-          className={`h-6 w-11 rounded-full p-1 transition ${
+          className={`shrink-0 h-6 w-11 rounded-full p-1 transition ${
             enabled ? "bg-accent-cyan" : "bg-line-panel"
           }`}
         >
@@ -557,9 +557,9 @@ function SelectionCard({
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-line-panel bg-bg-panel/60 px-4 py-4">
-      <div className="text-xl font-display text-accent-cyan">{value}</div>
-      <div className="mt-2 text-[10px] uppercase tracking-wider text-text-muted">{label}</div>
+    <div className="flex flex-col justify-center rounded-2xl border border-line-panel bg-bg-panel/60 p-3 sm:p-4 min-w-0">
+      <div className="text-lg sm:text-xl font-display text-accent-cyan truncate" title={value}>{value}</div>
+      <div className="mt-1 sm:mt-2 text-[10px] uppercase tracking-wider text-text-muted truncate" title={label}>{label}</div>
     </div>
   );
 }
@@ -575,7 +575,7 @@ function ContractRow({
 }) {
   return (
     <div className="rounded-xl border border-line-panel/50 bg-bg-deep/40 px-4 py-2.5">
-      <div className="text-[10px] text-text-muted uppercase tracking-wider">{label}</div>
+      <div className="text-[10px] text-text-muted uppercase tracking-wider truncate" title={label}>{label}</div>
       <div className="mt-1 text-xs text-text-secondary font-mono break-all">
         {address || (isText ? address : "Not deployed yet")}
       </div>

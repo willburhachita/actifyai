@@ -1,0 +1,7 @@
+- Preparing Convex functions...
+
+[31m×[39m Schema validation failed.
+Document with ID "k578dgrsezhgq33rnm7qvj0rfx84bqtw" in table "purchaseOrders" does not match the schema: Object contains extra field `autoSettleAt` that is not in the validator.
+
+Object: {autoSettleAt: 1775503360261.0, createdAt: 1775503060261.0, ebayItemId: "v1|110589189090|0", ebayListingUrl: "https://cgi.sandbox.ebay.com/itm/Brand-New-Wireless-Bluetooth-Headphones/110589189090?src=urllib&hash=item19bfa11be2:i:110589189090", escrowTxHash: "0x05297498b1a6ebde46ea7eb55319c5667477a117f362177a278a3647074835d3", productTitle: "Brand New Wireless Bluetooth Headphones", releaseTxHash: "0xbd169419983a2764e73aaf59990d68c345e3020443af1a1b3aeab1ddf74f8ec5", shopLabel: "eBay Mall", status: "completed", tokenAmount: 30.0, updatedAt: 1775503382487.0, userId: "jx7bfrzbzxmr9bt0mw4v2qjtqh83v9zg", walletAddress: "0x6ea0db14093d7c1c9f139f7f7b84fc539620b1ad"}
+Validator: v.object({createdAt: v.float64(), ebayItemId: v.optional(v.string()), ebayListingUrl: v.optional(v.string()), escrowTxHash: v.optional(v.string()), productId: v.optional(v.id("products")), productImage: v.optional(v.string()), productTitle: v.string(), releaseTxHash: v.optional(v.string()), shopId: v.optional(v.id("shops")), shopLabel: v.string(), status: v.string(), tokenAmount: v.float64(), updatedAt: v.float64(), userId: v.id("users"), walletAddress: v.string()})

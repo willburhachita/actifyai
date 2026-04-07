@@ -25,7 +25,7 @@ http.route({
     if (!userContext) {
       // @ts-ignore process injected by convex
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-      const authLink = `${baseUrl}/api/auth/login?returnTo=/app/settings?wa=${encodeURIComponent(whatsappId)}`;
+      const authLink = `${baseUrl}/auth/login?returnTo=/app/settings?wa=${encodeURIComponent(whatsappId)}`;
       
       reply = `Welcome to Actify AI! 👋\n\nIt looks like this number isn't linked to an account yet.\n\nPlease click the secure link below to log in / sign up. It will automatically link your WhatsApp!\n\n🔗 ${authLink}`;
     } else {
