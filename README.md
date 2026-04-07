@@ -45,6 +45,28 @@ Use this guide if you are:
 - a teammate setting up local development
 - a non-technical user who needs a checklist of what credentials are required
 
+## Important Tester Note
+
+Most testers only need **one account** for the full walkthrough.
+
+You do **not** need to create:
+- one account for the dashboard
+- another account for WhatsApp
+- another wallet for ACT
+- multiple test users just to try the main flow
+
+The normal tester flow is:
+
+1. Sign in to Actify with one Auth0 account
+2. Connect one MetaMask wallet
+3. Claim the free ACT starter balance
+4. Connect one eBay account if live browsing is needed
+5. Link one WhatsApp number to that same logged-in Actify account
+
+That is enough to test the product end to end.
+
+If you are a judge or non-technical tester, use a single identity all the way through unless the team specifically asks you to test account switching.
+
 ## What You Need Before You Start
 
 Some parts are required and some are optional.
@@ -61,15 +83,15 @@ Some parts are required and some are optional.
 - a little Sepolia ETH if you want real on-chain contract interactions
 
 ### Required For WhatsApp Testing
-- a Twilio account
-- a Twilio WhatsApp sandbox or production WhatsApp sender
-- a public URL that Twilio can reach
+-in order to link whatsapp account, you can message this whatsapp number= +1 (415) 523-8886
 
 ### Required For AI Responses
-- a valid Gemini API key
+Already set in backend 
 
 ### Required For Live Marketplace Browsing
 - eBay developer app credentials and a connected eBay account in the dashboard
+
+
 
 ### Optional Right Now
 - Shopify credentials
@@ -109,15 +131,12 @@ What Convex does:
 
 ### Gemini
 You need:
-- `GEMINI_API_KEY`
+- `GEMINI_API_KEY` (already added)
 
 What Gemini does:
 - interprets WhatsApp instructions
 - helps parse shopping intent
 
-Important:
-If Gemini says your key is leaked or revoked, you must create a new API key.
-The app now falls back more safely, but a healthy Gemini key is still recommended.
 
 ### Twilio WhatsApp
 You need:
@@ -139,6 +158,14 @@ What eBay does:
 - provides live listings for browsing and recommendations
 - supports the marketplace part of the dashboard
 
+Shared tester account for eBay connection:
+- Email: `actifyai@gmail.com`
+- Password: `ActifyAiTestPassword@12`
+
+Testing note:
+- this account is intended for shared demo/testing use only
+- rotate or replace this password after public demos or broader sharing
+
 ### Blockchain / Wallet
 You need:
 - MetaMask
@@ -149,6 +176,18 @@ What the wallet does:
 - stores the ACT token balance
 - claims the free ACT starter grant
 - supports real contract deployment and escrow interactions
+
+## Tester WhatsApp Number
+
+Unless the team tells you otherwise, testers should message:
+
+- `+1 (415) 523-8886`
+
+Twilio/technical format:
+
+- `whatsapp:+14155238886`
+
+If you are using the Twilio sandbox, the organizer may also need to give you the sandbox join phrase before your first message will work.
 
 ## Environment Variables
 
@@ -230,10 +269,64 @@ This is the easiest way to test the full product as a new user.
 - claim the one-time starter grant
 - first-time users receive **1,000 ACT**
 
+### Step 3A: If Sepolia is missing in MetaMask
+
+If you do not see Sepolia in MetaMask:
+
+1. Open MetaMask
+2. Open the network selector
+3. Turn on test networks if needed
+4. Add or enable `Sepolia`
+
+MetaMask official help:
+- [How to view testnets in MetaMask](https://support.metamask.io/es/configure/networks/how-to-view-testnets-in-metamask/)
+- [How to add a custom network](https://support.metamask.io/configure/networks/how-to-add-a-custom-network-rpc)
+
+In many MetaMask installs, Sepolia is already available once test networks are enabled.
+
+### Step 3B: If you need Sepolia ETH
+
+You usually only need Sepolia ETH for:
+- deploying contracts
+- real on-chain token actions
+- real escrow interactions
+
+You usually do **not** need extra Sepolia ETH just to understand the dashboard or read the UI.
+
+For test ETH, use a Sepolia faucet such as:
+- [Alchemy Sepolia Faucet](https://www.alchemy.com/dapps/sepolia-faucet)
+
+Typical faucet flow:
+
+1. Copy your MetaMask wallet address
+2. Open the faucet page
+3. Paste your address
+4. Request Sepolia ETH
+5. Wait for the balance to arrive in MetaMask
+
+Important:
+- Sepolia ETH is testnet-only and has no real-world value
+- faucet limits can change
+- some faucets require sign-in or rate-limit requests
+
+### Step 3C: What testers should do first before trying to buy
+
+Use this order:
+
+1. Connect MetaMask
+2. Switch to Sepolia
+3. Claim the free **1,000 ACT**
+4. Only after that, try ACT purchases or escrow flows
+
+For most testers, the free ACT claim is enough to test the buying journey without creating extra wallets or accounts.
+
 ### Step 4: Connect eBay
 - open Settings
 - connect your eBay account
 - this enables live listing browse/search flows
+- if you are using the shared tester account, use:
+  - `actifyai@gmail.com`
+  - `ActifyAiTestPassword@12`
 
 ### Step 5: Connect WhatsApp
 - open Settings
@@ -314,6 +407,7 @@ Steps:
 
 Expected result:
 - balance reflects the free starter grant
+- first-time users should see **1,000 ACT**
 
 ### Test 4: WhatsApp linking
 Goal:
@@ -377,24 +471,6 @@ Expected result:
 - the agent refuses to act
 - the reply explains that the connection is paused
 
-## Which Webhook URL To Use For Twilio
-
-Use the Next.js route, not the legacy compatibility route, whenever possible.
-
-Recommended Twilio webhook URL:
-- `https://your-public-app-url/api/whatsapp/webhook`
-
-Compatibility fallback route:
-- `https://your-convex-deployment-or-dev-url/whatsapp`
-
-Why this matters:
-- the Next.js webhook contains the richer WhatsApp agent flow
-- the Convex `/whatsapp` route should now fail more safely, but it is mainly a compatibility path
-
-If you are testing locally, Twilio cannot reach `localhost` directly.
-You will need:
-- a public tunnel
-- or a deployed URL
 
 ## What Is Working Today
 
@@ -467,6 +543,17 @@ Check:
 - ACT and escrow contracts are deployed
 - escrow is pointing at the correct token address
 - you have enough Sepolia ETH if the flow is truly on-chain
+
+### Problem: I am a tester and I do not want to create lots of accounts
+You should not need to.
+
+Recommended tester setup:
+- one Auth0 login
+- one MetaMask wallet
+- one WhatsApp number
+- one optional eBay account
+
+If something in the flow seems to require multiple identities, that is usually a setup issue rather than a product requirement.
 
 ## What A Non-Technical Tester Should Focus On
 
